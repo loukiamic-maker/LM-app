@@ -96,3 +96,26 @@
   .search-bar--compact .search-submit>span{display:none}
 }
 @media(max-width:360px){.search-bar--compact .search-field>svg:first-child{display:none}}
+
+/* Show the compact controls and results together in the normal page flow. */
+.search-section{padding-top:4px;padding-bottom:4px}
+.search-bar--compact{height:58px;padding:6px}
+.search-bar--compact .search-field{padding:6px 8px;min-height:44px}
+.search-bar--compact .search-submit{min-height:44px}
+.search-section--results .hero-assurance{display:none}
+.search-section+.salons-section{padding-top:4px;scroll-margin-top:66px}
+.search-section--results+.salons-section .recommendations-title{margin-bottom:10px}
+.search-section--results+.salons-section .active-filters{margin-bottom:12px}
+@media(max-width:700px){
+  .search-bar--compact{height:58px;padding:6px;gap:7px}
+  .search-bar--compact .search-field{padding:6px 8px;min-height:44px}
+  .search-section+.salons-section{padding-top:4px;scroll-margin-top:66px}
+}
+
+@media(max-width:700px){
+  .search-bar--compact{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) auto}
+  .search-bar--compact .search-submit{padding:0 9px;font-size:10px;gap:5px}
+  .search-bar--compact .search-submit>span{display:inline}
+  .search-bar--compact .search-submit>svg{width:14px;height:14px}
+}
+@media(max-width:360px){.search-bar--compact .search-submit>svg{display:none}}

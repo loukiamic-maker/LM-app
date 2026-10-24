@@ -85,7 +85,7 @@ function App() {
 
         <section className="categories-section container"><div className="section-title"><h2>Τι θα κάνουμε σήμερα;</h2><span className="section-aside">Λίγη φροντίδα, πολλή καλή διάθεση <Sparkles size={15} /></span></div><div className="category-grid">{categories.slice(1).map(c => <button key={c.id} className={`category-card ${category === c.id ? 'category-active' : ''}`} aria-pressed={category === c.id} onClick={() => chooseCategory(c.id)}><Photo index={c.photoIndex} /><span>{c.shortLabel}</span>{category === c.id && <span className="category-check"><Check size={12} /></span>}</button>)}</div></section>
 
-        <section className="search-section container" aria-label="Αναζήτηση χώρων">
+        <section className={`search-section container ${isFiltered ? "search-section--results" : ""}`} aria-label="Αναζήτηση χώρων">
           <form className="search-bar search-bar--compact" onSubmit={search}>
             <label className="search-field city-field"><MapPin size={17} strokeWidth={1.6} /><span><select aria-label="Πόλη ή περιοχή" value={cityInput} onChange={e => setCityInput(e.target.value)}><option value="all">Πόλη</option>{allowedCities.map(c => <option key={c}>{c}</option>)}</select></span><ChevronDown size={12} /></label>
             <label className="search-field date-field"><CalendarDays size={17} strokeWidth={1.6} /><span className="date-input-wrap"><input type="date" className={!searchDate ? "date-empty" : undefined} aria-label="Ημερομηνία ραντεβού" lang="el-GR" value={searchDate} min={nextBookableDate()} onChange={e => setSearchDate(e.target.value)} />{!searchDate && <span className="date-placeholder" aria-hidden="true">Ημερομηνία</span>}</span></label>

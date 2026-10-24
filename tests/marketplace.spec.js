@@ -22,6 +22,14 @@ async function chooseTime(page) {
   return dialog;
 }
 
+async function expectSearchAboveResults(page) {
+  await expect.poll(() => page.evaluate(() => {
+    const bar = document.querySelector('.search-bar').getBoundingClientRect();
+    const heading = document.querySelector('.recommendations-title').getBoundingClientRect();
+    return bar.top >= 0 && bar.top <= 10 && bar.bottom <= innerHeight && heading.top >= bar.bottom;
+  })).toBe(true);
+}
+
 test('service icon selection is preserved by city and date search', async ({ page }) => {
   const nailsCategory = page.getByRole('button', { name: 'Νύχια', exact: true });
   await nailsCategory.click();
@@ -37,6 +45,7 @@ test('service icon selection is preserved by city and date search', async ({ pag
   await expect(page.locator('.salon-card')).toHaveCount(1);
   await expect(page.locator('.salon-card')).toContainText('Bare Nail Atelier');
   await expect(page.locator('.salon-card')).toContainText('Λευκωσία');
+  await expectSearchAboveResults(page);
   await page.getByRole('button', { name: 'Καθαρισμός φίλτρων' }).click();
   await expect(page.locator('.salon-card')).toHaveCount(3);
   await page.getByLabel('Επιλογή χώρας').selectOption('Κύπρος');
@@ -162,4 +171,44 @@ test('mobile navigation and booking fit a narrow viewport', async ({ page }) => 
   await page.getByRole('button', { name: /Δείτε τη δοκιμαστική έκδοση/ }).click();
   await expect(page.getByRole('heading', { name: 'Ημερολόγιο', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('mobile results show editable search controls after searching without floating while scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('button', { name: 'Αναζήτηση', exact: true }).locator('span')).toBeVisible();
+  await page.getByRole('button', { name: 'Νύχια', exact: true }).click();
+  await page.getByLabel('Πόλη ή περιοχή').selectOption('Λευκωσία');
+  const dateInput = page.getByLabel('Ημερομηνία ραντεβού');
+  const firstDate = await dateInput.getAttribute('min');
+  await dateInput.fill(firstDate);
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expectSearchAboveResults(page);
+  await expect(page.locator('.salon-card')).toHaveCount(1);
+
+  const next = new Date(`${firstDate}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 2);
+  const changedDate = next.toISOString().slice(0, 10);
+  await dateInput.fill(changedDate);
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expectSearchAboveResults(page);
+  await expect(dateInput).toHaveValue(changedDate);
+  await expect(page.getByRole('button', { name: 'Νύχια', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.salon-card')).toContainText('Bare Nail Atelier');
+  await expect(page.locator('.search-section')).toHaveCount(1);
+  await expect(page.getByLabel('Πόλη ή περιοχή')).toHaveCount(1);
+  await expect(dateInput).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Δείτε υπηρεσίες στο Bare Nail Atelier' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: /Ημιμόνιμο μανικιούρ/ }).click();
+  await dialog.getByRole('button', { name: 'Συνέχεια', exact: true }).click();
+  const expectedDay = new Date(`${changedDate}T12:00:00Z`).toLocaleDateString('el-GR', { timeZone: 'Europe/Nicosia', weekday: 'long', day: 'numeric', month: 'long' });
+  await expect(dialog.locator('.booking-days .is-selected')).toHaveAttribute('aria-label', expectedDay);
+  await dialog.getByRole('button', { name: 'Κλείσιμο κράτησης' }).click();
+
+  const resultScrollY = await page.evaluate(() => scrollY);
+  await expect(page.locator('.search-section')).toHaveCSS('position', 'static');
+  await page.evaluate(() => scrollBy({ top: 350, behavior: 'instant' }));
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(resultScrollY + 200);
+  await expect.poll(() => page.locator('.search-bar').evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0);
 });

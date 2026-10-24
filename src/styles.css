@@ -14,3 +14,6 @@
 .brand-flower{width:39px;height:39px;flex-shrink:0}.heading-sparkle{width:39px;height:39px}.dialog-flower{width:45px;height:45px}.footer-top .brand-flower{width:32px;height:32px}
 @media(max-width:960px){.brand-flower{width:34px;height:34px}}
 @media(max-width:700px){.brand-flower{width:33px;height:33px}.heading-sparkle{width:24px;height:24px}.dialog-flower{width:37px;height:37px}.footer-top .brand-flower{width:33px;height:33px}}
+
+.header-inner .desktop-nav{margin-left:0}.hero-content{margin-bottom:26px}.hero h1{margin-bottom:0}
+@media(max-width:700px){.header-actions{width:100%;justify-content:space-between}.hero-content{margin-bottom:24px}}

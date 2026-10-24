@@ -1,5 +1,6 @@
-// Public browser settings only. Never put a service_role key, database password,
-// SMTP password or email-provider secret in this file.
-// Add supabaseUrl and supabasePublishableKey when the hosted database is ready.
-// An empty object uses VITE_ build settings, or demo mode when none are supplied.
-window.MERAKI_CONFIG = {};
+// Public Supabase browser settings. Access is protected by database row security.
+// Never add a service-role key, database password, SMTP password or email secret.
+window.MERAKI_CONFIG = {
+  "supabaseUrl": "https://zpwczfixndjvlrhrhbop.supabase.co",
+  "supabasePublishableKey": "sb_publishable_57a44zdOoPj0_BB8fJf87Q_sFJGIJkZ"
+};

@@ -41,6 +41,16 @@ select
 
 Keep the successful query as a named migration record. If the migration reports an error, preserve the exact error and resolve it before connecting the public website. Do not repeatedly rerun this initial migration or delete tables containing real data to work around an error.
 
+If `profiles` already exists and all eight tables have the expected columns, the
+initial setup may already be installed. Run the complete read-only
+[`supabase/verify-installation.sql`](../supabase/verify-installation.sql) in a new
+SQL Editor query instead of repeating the installation. It returns eight summary
+rows checking the booking functions, role access, row security, policies,
+triggers, overlap constraint and private notification queue. `CHECK NEEDED`
+identifies missing or mismatched setup objects. All `PASS` results confirm these
+installation checks; they do not replace a real customer/owner booking test or
+confirmation that emails are delivered.
+
 ## 3. Configure account emails and callback URLs
 
 In Supabase **Authentication**, enable email/password accounts and keep **Confirm email** enabled. Customers must confirm their email before making a real booking.

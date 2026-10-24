@@ -128,6 +128,12 @@
 .photo.photo--placeholder{background-image:none;background-color:#eee5d9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#a18868;font-size:12px}
 .header-inner{gap:22px}
 .appointment-card .appointment-price{min-width:120px}
+.salon-location>span{min-width:0;overflow-wrap:anywhere}
+.footer-top .footer-brand{margin-left:auto;flex-shrink:0;align-self:flex-end}
+.footer-top .footer-brand .brand{width:72px;font-size:19px}
+.footer-top .footer-brand .brand>img{width:70px;height:46px}
+.info-dialog .brand.dialog-brand{display:flex;width:78px;font-size:21px;letter-spacing:1.3px;margin-bottom:20px}
+.info-dialog .brand.dialog-brand>img{width:78px;height:58px}
 @media(max-width:700px){
   .site-header{height:78px}
   .search-section .hero-assurance{height:11px}

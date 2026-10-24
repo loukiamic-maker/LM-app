@@ -32,6 +32,14 @@ Follow [the step-by-step launch guide](docs/go-live.md). In brief:
 
 The application includes customer signup/verification/login/password recovery, server-confirmed bookings, customer history/cancellation/rescheduling, owner onboarding and catalogue/schedule/time-off management, a shared business calendar, and manual records of payments received **at the salon**. No online card collection or card charges are implemented.
 
+Date searches check the real availability RPC for active services before showing
+matching salons. Each search limits requests to four at a time, stale results are
+ignored, and a failed check shows a retry message instead of false availability.
+
+Production builds load a content-versioned public configuration file. Missing or
+invalid configuration shows a connection error instead of fictional listings.
+Only an explicit pair of blank runtime settings enables isolated demo checks.
+
 Postgres derives prices, durations, identity and email on the server. RLS isolates accounts/businesses; an exclusion constraint and transactions reject concurrent staff overlaps. Changes preserve agreed price/duration/cancellation snapshots. New business listings remain private until administrator approval. Private outbox delivery covers confirmations, changes, cancellations and reminders; actual email needs external provider configuration.
 
 ## Verify

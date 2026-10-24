@@ -144,7 +144,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
         </div>
 
         {step === 1 && <div className="booking-step-content">
-          <div className="booking-salon-line"><MapPin size={15}/>{salon.location}<span>·</span><span>{salon.country}</span></div>
+          <div className="booking-salon-line"><MapPin size={15}/><span>{[salon.location, salon.country].filter(Boolean).join(', ')}</span></div>
           <div className="booking-services">
             {salon.services.map((item) => <button key={item.name} className={`booking-service ${service?.name === item.name ? 'is-selected' : ''}`} onClick={() => setService(item)} aria-pressed={service?.name === item.name}>
               <span className="booking-service-icon"><Scissors size={21}/></span>

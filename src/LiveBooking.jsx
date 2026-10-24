@@ -199,7 +199,7 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
         </div>
 
         {step === 1 && <div className="booking-step-content">
-          <div className="booking-salon-line"><MapPin size={15}/>{salon.location}<span>·</span><span>{salon.country}</span></div>
+          <div className="booking-salon-line"><MapPin size={15}/><span>{[salon.location, salon.country].filter(Boolean).join(', ')}</span></div>
           {services.length ? <div className="booking-services">
             {services.map((item) => <button key={item.id} type="button" className={`booking-service ${service?.id === item.id ? 'is-selected' : ''}`} onClick={() => { setService(item); setError(''); }} aria-pressed={service?.id === item.id}>
               <span className="booking-service-icon"><Scissors size={21}/></span>

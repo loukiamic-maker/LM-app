@@ -35,21 +35,25 @@ async function expectSearchAboveResults(page) {
   })).toBe(true);
 }
 
+async function chooseCity(page, city) {
+  await page.getByRole('combobox', { name: 'Πόλη ή περιοχή' }).click();
+  await page.getByRole('listbox').getByRole('option', { name: city, exact: true }).click();
+}
+
 test('service icon selection is preserved by city and date search', async ({ page }) => {
-  const citySelect = page.getByLabel('Πόλη ή περιοχή');
+  const citySelect = page.getByRole('combobox', { name: 'Πόλη ή περιοχή' });
   await expect(page.getByLabel('Επιλογή χώρας')).toHaveCount(0);
-  expect(await citySelect.locator('optgroup').evaluateAll(groups => groups.map(group => ({
-    country: group.label,
-    cities: [...group.querySelectorAll('option')].map(option => option.textContent),
-  })))).toEqual([
-    { country: 'Κύπρος', cities: ['Λάρνακα', 'Λευκωσία', 'Λεμεσός', 'Πάφος', 'Παραλίμνι'] },
-    { country: 'Ελλάδα', cities: ['Αθήνα', 'Θεσσαλονίκη'] },
-  ]);
+  await citySelect.click();
+  const listbox = page.getByRole('listbox');
+  await expect(listbox.getByRole('group')).toHaveCount(2);
+  await expect(listbox.getByRole('group', { name: 'Κύπρος', exact: true }).getByRole('option')).toHaveText(['Λάρνακα', 'Λευκωσία', 'Λεμεσός', 'Πάφος', 'Παραλίμνι']);
+  await expect(listbox.getByRole('group', { name: 'Ελλάδα', exact: true }).getByRole('option')).toHaveText(['Αθήνα', 'Θεσσαλονίκη']);
+  await page.keyboard.press('Escape');
   const nailsCategory = page.getByRole('button', { name: 'Νύχια', exact: true });
   await nailsCategory.click();
   await expect(nailsCategory).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Υπηρεσία', { exact: true })).toHaveCount(0);
-  await citySelect.selectOption('Λευκωσία');
+  await chooseCity(page, 'Λευκωσία');
   const dateInput = page.getByLabel('Ημερομηνία ραντεβού');
   const selectedDate = await dateInput.getAttribute('min');
   await dateInput.fill(selectedDate);
@@ -62,22 +66,50 @@ test('service icon selection is preserved by city and date search', async ({ pag
   await expectSearchAboveResults(page);
   await page.getByRole('button', { name: 'Καθαρισμός φίλτρων' }).click();
   await expect(page.locator('.salon-card')).toHaveCount(3);
-  await citySelect.selectOption('Λάρνακα');
+  await chooseCity(page, 'Λάρνακα');
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   await expect(page.locator('.salon-card')).toHaveCount(1);
   await expect(page.locator('.salon-card')).toContainText('Still Wellness House');
   await expect(page.locator('.salon-grid')).not.toContainText('Αθήνα');
-  await citySelect.selectOption('Αθήνα');
+  await chooseCity(page, 'Αθήνα');
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   await expect(page.locator('.salon-card')).toHaveCount(2);
   await expect(page.locator('.salon-grid')).toContainText('Atelier Hair Studio');
   await expect(page.locator('.salon-grid')).toContainText('The Gentlemen’s Club');
   await expect(page.locator('.salon-grid')).not.toContainText('Still Wellness House');
   await expectSearchAboveResults(page);
-  await citySelect.selectOption('Πάφος');
+  await chooseCity(page, 'Πάφος');
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   await expect(page.locator('.salon-card')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα.' })).toBeVisible();
+});
+
+test('city groups match city font size and keyboard selection can be cancelled or committed', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const city = page.getByRole('combobox', { name: 'Πόλη ή περιοχή' });
+  await city.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(city).toHaveAttribute('aria-expanded', 'true');
+  const listbox = page.getByRole('listbox');
+  const optionFont = await listbox.getByRole('option', { name: 'Λάρνακα', exact: true }).evaluate(element => getComputedStyle(element).fontSize);
+  const countryFonts = await listbox.locator('.city-picker-country').evaluateAll(elements => elements.map(element => getComputedStyle(element).fontSize));
+  expect(countryFonts).toEqual([optionFont, optionFont]);
+  await page.keyboard.press('End');
+  const lastOption = await listbox.getByRole('option', { name: 'Θεσσαλονίκη', exact: true }).getAttribute('id');
+  await expect(city).toHaveAttribute('aria-activedescendant', lastOption);
+  await page.keyboard.press('Escape');
+  await expect(city).toHaveAttribute('aria-expanded', 'false');
+  await expect(city).toContainText('Πόλη');
+  await expect(city).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(city).toContainText('Λάρνακα');
+  await expect(city).toHaveAttribute('aria-expanded', 'false');
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(page.locator('.salon-card')).toHaveCount(1);
+  await expect(page.locator('.salon-card')).toContainText('Still Wellness House');
 });
 
 test('favorite survives reload and can be removed from favorites page', async ({ page }) => {
@@ -204,7 +236,7 @@ test('mobile results show editable search controls after searching without float
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('button', { name: 'Αναζήτηση', exact: true }).locator('span')).toBeVisible();
   await page.getByRole('button', { name: 'Νύχια', exact: true }).click();
-  await page.getByLabel('Πόλη ή περιοχή').selectOption('Λευκωσία');
+  await chooseCity(page, 'Λευκωσία');
   const dateInput = page.getByLabel('Ημερομηνία ραντεβού');
   const firstDate = await dateInput.getAttribute('min');
   await dateInput.fill(firstDate);

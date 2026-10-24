@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Eye, EyeOff, LoaderCircle, LogOut, Mail, ShieldCheck, UserRound, X } from 'lucide-react';
 import { authRedirectUrl, platformError, platformReady, supabase, updateProfile as saveProfile } from './lib/platform';
+import Brand from './Brand';
 import './account.css';
 
 const AccountContext = createContext({ user: null, profile: null, loading: false });
@@ -105,7 +106,7 @@ export function AccountPanel({ onClose }) {
   const passwordMode = mode === 'password';
   return <div className="account-overlay" onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}><section className="account-panel" role="dialog" aria-modal="true" aria-labelledby="account-title" ref={panel}>
     <button className="account-close" onClick={onClose} aria-label="Κλείσιμο λογαριασμού"><X size={20} /></button>
-    <img className="account-logo" src={`${import.meta.env.BASE_URL}images/eneres-flower.png`} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} /><span className="account-brand">Eneres</span>
+    <Brand className="account-identity" />
     <h2 id="account-title">{passwordMode ? 'Ο νέος σας κωδικός.' : user ? 'Το προφίλ σας.' : mode === 'signup' ? 'Η φροντίδα ξεκινά εδώ.' : mode === 'reset' ? 'Ξεχάσατε τον κωδικό;' : 'Καλώς ήρθατε.'}</h2>
     {user && !passwordMode && <p className="account-email"><Mail size={15} />{user.email}</p>}
     {user && !user.email_confirmed_at && <div className="account-notice">Επιβεβαιώστε το email σας πριν κάνετε κράτηση.<button disabled={busy} onClick={() => perform(async () => { const { error } = await supabase.auth.resend({ type: 'signup', email: user.email, options: { emailRedirectTo: authRedirectUrl() } }); if (error) throw error; setNotice('Στάλθηκε νέος σύνδεσμος επιβεβαίωσης.'); })}>Νέος σύνδεσμος</button></div>}

@@ -2,7 +2,13 @@
 
 Eneres includes a hosted Supabase backend for customer accounts, business ownership, availability and **payment at the salon**. No card or Apple Pay charge is implemented.
 
-The public website remains a demo while both values in `public/platform-config.js` are empty. Demo appointments stay in that browser and are never imported into the real database. Entering a valid public project configuration switches the website to live mode; it does not create the database, publish a business or enable email delivery. Complete the database steps first.
+The connected public website uses the real project settings in
+`public/platform-config.js`. Production builds load a content-versioned copy so
+an old cached empty settings file is not reused. Missing or invalid production
+configuration shows a connection error; it never silently supplies fictional
+salons. Isolated demo checks explicitly supply two blank runtime settings. Demo
+appointments are never imported into the real database. Connecting a project
+does not create its schema, publish a business or enable email delivery.
 
 The source and connected release now contain the owner's public project configuration. The owner has supplied all eight `PASS` results from the installation verification query. Read-only checks confirm that the real directory responds, email/password signup is enabled and email confirmation is required. A browser smoke check against the real directory passes. No real account email or booking has been sent by this validation, and no salon is published yet. Continue with Auth redirects, email delivery, the first real business and hosted acceptance checks below.
 

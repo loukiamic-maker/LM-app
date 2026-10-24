@@ -23,7 +23,12 @@ function configurationReady() {
 }
 
 export const platformReady = configurationReady();
-export const platformConfigurationError = Boolean(projectUrl || publishableKey) && !platformReady;
+const explicitDemo = runtime.supabaseUrl === '' && runtime.supabasePublishableKey === '';
+// A production page with a missing/blocked connection file must not silently
+// switch to fictional listings. Isolated demo checks can opt in with two blanks.
+export const platformConfigurationError = !platformReady && (
+  Boolean(projectUrl || publishableKey) || (import.meta.env.PROD && !explicitDemo)
+);
 export const supabase = platformReady ? createClient(projectUrl, publishableKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
 }) : null;

@@ -67,10 +67,13 @@ async function mockPlatform(page, options = {}) {
     if (path === '/rest/v1/staff') return send(publicSalon.staff[0]);
     if (path === '/rest/v1/staff_hours' || path === '/rest/v1/staff_time_off') return send([]);
     if (path === '/rest/v1/bookings') return send(state.bookings);
-    if (path === '/rest/v1/rpc/get_availability') return send([10, 12].map(hour => {
-      const starts_at = localInstant(body.p_date, hour);
-      return { staff_id: ids.staff, staff_name: publicSalon.staff[0].name, starts_at, ends_at: oneHourLater(starts_at), local_time: `${hour}:00` };
-    }));
+    if (path === '/rest/v1/rpc/get_availability') {
+      if (state.failAvailability) return send({ message: 'Availability service temporarily unavailable' }, 503);
+      return send((state.unavailableDates?.includes(body.p_date) ? [] : [10, 12]).map(hour => {
+        const starts_at = localInstant(body.p_date, hour);
+        return { staff_id: ids.staff, staff_name: publicSalon.staff[0].name, starts_at, ends_at: oneHourLater(starts_at), local_time: `${hour}:00` };
+      }));
+    }
     if (path === '/rest/v1/rpc/create_booking') {
       if (state.failCreate) return send({ code: '23P01', message: 'slot_taken: booking overlap' }, 409);
       if (state.holdCreate) { state.createPending = true; await new Promise(resolve => { state.releaseCreate = resolve; }); }
@@ -141,12 +144,14 @@ test('live catalog, signup and authenticated venue booking wait for server confi
   await page.goto('/');
   await expect(page.locator('.salon-card')).toHaveCount(1);
   await expect(page.locator('.salon-card')).toContainText(publicSalon.name);
+  await expect(page.locator('.salon-location')).toHaveText('Σόλωνος 10, Αθήνα, Ελλάδα');
   await expect(page.locator('.salon-grid')).not.toContainText('Atelier Hair Studio');
   await expect(page.locator('.rating')).toHaveCount(0);
   await expect(page.locator('.demo-note')).toHaveCount(0);
   await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
   await expect(page.locator('.booking-live')).toHaveCount(0);
   const panel = page.locator('.account-panel');
+  await expect(panel.locator('.eneres-brand img')).toHaveAttribute('src', /eneres-flower\.png$/);
   await panel.getByRole('button', { name: 'Δημιουργία λογαριασμού', exact: true }).click();
   await panel.getByLabel('Όνομα', { exact: true }).fill('Ελένη Δοκιμή');
   await panel.getByLabel('Email', { exact: true }).fill(account.email);
@@ -171,6 +176,38 @@ test('live catalog, signup and authenticated venue booking wait for server confi
   await page.locator('.desktop-nav').getByRole('button', { name: /Τα ραντεβού μου/ }).click();
   await expect(page.locator('.appointment-card')).toContainText('Επιβεβαιωμένο');
   expect(state.bookings[0]).toMatchObject({ payment_method: 'pay_at_salon', payment_status: 'unpaid' });
+  expect(state.unexpected).toEqual([]);
+});
+
+test('date search shows only venues with real server availability for the selected day', async ({ page }) => {
+  const unavailableDate = futureDate(8);
+  const availableDate = futureDate(9);
+  const state = await mockPlatform(page, { unavailableDates: [unavailableDate] });
+  await page.goto('/');
+  await expect(page.locator('.salon-card')).toHaveCount(1);
+  await page.getByRole('combobox', { name: 'Πόλη ή περιοχή' }).click();
+  await page.getByRole('listbox').getByRole('option', { name: 'Αθήνα', exact: true }).click();
+  const date = page.getByLabel('Ημερομηνία ραντεβού');
+  await date.fill(unavailableDate);
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect.poll(() => state.calls.some(call => call.path.endsWith('/get_availability') && call.body.p_date === unavailableDate)).toBe(true);
+  await expect(page.locator('.salon-card')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα.' })).toBeVisible();
+  await date.fill(availableDate);
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect.poll(() => state.calls.some(call => call.path.endsWith('/get_availability') && call.body.p_date === availableDate)).toBe(true);
+  await expect(page.locator('.salon-card')).toHaveCount(1);
+  await expect(page.locator('.salon-card')).toContainText(publicSalon.name);
+  state.failAvailability = true;
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('.empty-state')).toHaveCount(0);
+  state.failAvailability = false;
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(page.locator('.salon-card')).toHaveCount(1);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(state.calls.filter(call => call.path.endsWith('/get_availability')).every(call => call.body.p_service_id === ids.service)).toBe(true);
+  expect(state.calls.some(call => call.path.endsWith('/create_booking'))).toBe(false);
   expect(state.unexpected).toEqual([]);
 });
 

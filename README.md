@@ -2,7 +2,9 @@
 
 Greek beauty and wellness booking website for Greece and Cyprus, with the supplied floral logo and **payment at the salon**. The existing public address is https://loukiamic-maker.github.io/LM-app/.
 
-The website runs in **demo mode until a real Supabase project is configured**. Example businesses and local demo bookings are never imported into the live database. The Eneres name and eneres.com remain provisional: registration and trademark availability have not been verified.
+The website is configured for the owner's **real Supabase project**. The owner has confirmed all eight installation verification checks pass, and the real public directory and confirmed-email settings respond successfully. The directory has no published salons yet. Email delivery, real customer/owner booking flows and operator details still need completing before inviting customers. Example businesses and local demo bookings are never imported into the live database.
+
+The Eneres name remains provisional. Verisign's registry confirms that **eneres.com is already registered**; it has not been acquired for this project. Trademark availability and alternative domain availability remain unverified.
 
 ## Run locally
 

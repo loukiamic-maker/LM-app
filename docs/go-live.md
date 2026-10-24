@@ -4,7 +4,9 @@ Eneres includes a hosted Supabase backend for customer accounts, business owners
 
 The public website remains a demo while both values in `public/platform-config.js` are empty. Demo appointments stay in that browser and are never imported into the real database. Entering a valid public project configuration switches the website to live mode; it does not create the database, publish a business or enable email delivery. Complete the database steps first.
 
-The name Eneres and its flower artwork are the current branding. Ownership of an Eneres domain and trademark availability have not been confirmed; cloud network restrictions prevented completing authoritative registry checks. Keep the current website address until those checks are complete. See [the custom-domain guide](custom-domain.md).
+The source and connected release now contain the owner's public project configuration. The owner has supplied all eight `PASS` results from the installation verification query. Read-only checks confirm that the real directory responds, email/password signup is enabled and email confirmation is required. A browser smoke check against the real directory passes. No real account email or booking has been sent by this validation, and no salon is published yet. Continue with Auth redirects, email delivery, the first real business and hosted acceptance checks below.
+
+The name Eneres and its flower artwork are the current branding. Verisign's authoritative registry reports that `eneres.com` is already registered; this project does not own it. Trademark clearance and alternative domain availability have not been established. Keep the current website address until an available domain is verified and owned. See [the custom-domain guide](custom-domain.md).
 
 ## 1. Create an EU Supabase project
 

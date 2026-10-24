@@ -1,8 +1,15 @@
 # Eneres custom website address
 
-The public brand is **Eneres**. `eneres.com` is a candidate address, not a registered or configured domain for this project. Its availability could not be established: the authoritative `.com` registry RDAP lookup was blocked by this environment's network proxy on 24 October 2026. No domain was purchased, no DNS records were changed, and no custom-domain claim was added to the website.
+The public brand is **Eneres**. The [authoritative Verisign registry lookup](https://rdap.verisign.com/com/v1/domain/eneres.com) returned `ENERES.COM` as an existing registration on 24 October 2026. It is not owned or configured by this project. Its listed expiry is not a promise that it will become available. No domain was purchased, no DNS records were changed, and no custom-domain claim was added to the website.
 
 An owned `eneres.gr` or `eneres.cy` could also be used. Their availability and registration eligibility have not been checked. Keep the existing GitHub Pages address until the owner chooses and controls the final domain.
+
+The same Verisign RDAP service returned HTTP 404 (no registration record found)
+for `bookeneres.com` and `eneresbeauty.com` on 24 October 2026. These are candidates
+for a registrar availability and pricing check, not a guarantee that registration
+will succeed. Neither domain has been purchased or configured. Trademark searches
+have not produced authoritative results: EUIPO's search page returned HTTP 403,
+and a reachable TMview landing page alone does not establish trademark status.
 
 ## Choose and verify the domain
 

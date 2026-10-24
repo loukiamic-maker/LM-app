@@ -17,3 +17,32 @@
 
 .header-inner .desktop-nav{margin-left:0}.hero-content{margin-bottom:26px}.hero h1{margin-bottom:0}
 @media(max-width:700px){.header-actions{width:100%;justify-content:space-between}.hero-content{margin-bottom:24px}}
+
+/* Separate search controls, with a consistent surface and clear focus state. */
+.search-bar{gap:8px;padding:10px;border-radius:16px}
+.search-field{align-self:stretch;min-height:62px;padding:11px 14px;border:1px solid #e9e0d4;border-radius:10px;background:#faf7f2;transition:border-color .2s,background .2s,box-shadow .2s}
+.search-field:focus-within{border-color:#c8876b;background:#fffaf5;box-shadow:0 0 0 2px #b9583812}
+.search-field .field-label{color:#887b6a;white-space:nowrap}
+.search-field select,.search-field input{color:#514437}
+.search-submit{border-radius:10px;align-self:stretch;justify-content:center}
+.date-field{max-width:220px}
+.date-input-wrap{position:relative;display:block;min-height:18px}
+.date-input-wrap input{display:block;min-height:18px;position:relative;z-index:1}
+.date-input-wrap input.date-empty{color:transparent}
+.date-empty::-webkit-datetime-edit{color:transparent}
+.date-placeholder{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);display:block;padding-right:18px;color:#514437;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+@media(max-width:960px){.search-field{padding:11px;gap:8px}.date-placeholder{font-size:11px}}
+@media(max-width:700px){
+  .search-bar{gap:8px;padding:10px;border-radius:16px}
+  .search-field,.search-field:first-child,.date-field{min-height:70px;padding:11px 10px;border:1px solid #e9e0d4;border-radius:10px}
+  .date-field{max-width:none}
+  .search-field .field-label{font-size:9px;margin-bottom:8px}
+  .search-field select,.search-field input,.date-placeholder{font-size:10px}
+  .search-submit{min-height:70px;margin:0;padding:12px;font-size:11px;border-radius:10px;gap:7px}
+  .bottom-nav{bottom:max(4px,env(safe-area-inset-bottom,0px));left:12px;right:12px;background:var(--accent);border-color:#a84b2f;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 5px 22px #78331e30;padding:8px 5px 7px}
+  .bottom-nav>button{color:#fff}
+  .bottom-nav>button>span{font-size:9px}
+  .bottom-nav>button.bottom-active{color:#fff;background:#914026}
+  .bottom-nav>button.bottom-active>span{font-weight:600}
+  .bottom-nav>button:focus-visible{outline-color:#fff}
+}

@@ -22,10 +22,18 @@ async function chooseTime(page) {
   return dialog;
 }
 
-test('service and city search returns matching Greek-market salons', async ({ page }) => {
-  await page.getByLabel('Υπηρεσία', { exact: true }).selectOption('nails');
+test('service icon selection is preserved by city and date search', async ({ page }) => {
+  const nailsCategory = page.getByRole('button', { name: 'Νύχια', exact: true });
+  await nailsCategory.click();
+  await expect(nailsCategory).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Υπηρεσία', { exact: true })).toHaveCount(0);
   await page.getByLabel('Πόλη ή περιοχή').selectOption('Λευκωσία');
+  const dateInput = page.getByLabel('Ημερομηνία ραντεβού');
+  const selectedDate = await dateInput.getAttribute('min');
+  await dateInput.fill(selectedDate);
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(nailsCategory).toHaveAttribute('aria-pressed', 'true');
+  await expect(dateInput).toHaveValue(selectedDate);
   await expect(page.locator('.salon-card')).toHaveCount(1);
   await expect(page.locator('.salon-card')).toContainText('Bare Nail Atelier');
   await expect(page.locator('.salon-card')).toContainText('Λευκωσία');

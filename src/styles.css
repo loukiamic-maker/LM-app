@@ -80,3 +80,19 @@
   .search-section .hero-assurance{margin-top:6.5px}
   .search-section+.salons-section{padding-top:16.5px}
 }
+
+/* One compact row; service selection lives in the category tiles above. */
+.search-bar--compact{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;height:60px;padding:6px;gap:6px;border-radius:12px}
+.search-bar--compact .search-field{height:100%;min-height:0;padding:8px 11px;gap:8px;border:1px solid #e9e0d4;border-radius:8px}
+.search-bar--compact .date-field{max-width:none}
+.search-bar--compact .search-field>span{align-self:center}
+.search-bar--compact .search-field select,.search-bar--compact .search-field input,.search-bar--compact .date-placeholder{font-size:12px}
+.search-bar--compact .search-submit{height:100%;min-height:0;margin:0;padding:8px 19px;border-radius:8px}
+@media(max-width:700px){
+  .search-bar--compact{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) 46px;height:85px;padding:8px;gap:7px}
+  .search-bar--compact .search-field{height:100%;min-height:0;padding:8px;gap:6px;border-radius:9px}
+  .search-bar--compact .search-field select,.search-bar--compact .search-field input,.search-bar--compact .date-placeholder{font-size:10px}
+  .search-bar--compact .search-submit{height:100%;min-height:0;padding:0;border-radius:9px}
+  .search-bar--compact .search-submit>span{display:none}
+}
+@media(max-width:360px){.search-bar--compact .search-field>svg:first-child{display:none}}

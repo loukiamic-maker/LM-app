@@ -1,3 +1,6 @@
+import { platformReady } from './lib/platform';
+import LiveBusiness from './LiveBusiness';
+import Brand from './Brand';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, LayoutDashboard, LockKeyhole, Mail, Plus, Scissors, TrendingUp, Users, X } from 'lucide-react';
 import './business.css';
@@ -55,7 +58,9 @@ function BizDialog({ title, onClose, children }) {
   </div>;
 }
 
-export default function Business({ onBack, bookings = [] }) {
+export default function Business(props) { return platformReady ? <LiveBusiness {...props}/> : <DemoBusiness {...props}/>; }
+
+function DemoBusiness({ onBack, bookings = [] }) {
   const [view, setView] = useState('login');
   const [signup, setSignup] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -122,7 +127,7 @@ export default function Business({ onBack, bookings = [] }) {
     <section className="biz-auth-card">
       <div className="biz-auth-photo"><div className="biz-auth-photo-overlay"><span className="biz-photo-eyebrow">Ο ΧΩΡΟΣ ΣΑΣ. ΟΙ ΑΝΘΡΩΠΟΙ ΣΑΣ.</span><p>Περισσότερος χρόνος<br />για ό,τι αγαπάτε.</p><span>Εμείς φροντίζουμε τα ραντεβού.</span></div></div>
       <div className="biz-auth-content">
-        <span className="biz-brand">meraki<BrandMark /></span>
+        <Brand />
         <span className="biz-eyebrow">ΓΙΑ ΕΠΑΓΓΕΛΜΑΤΙΕΣ</span>
         <h1>{signup ? 'Ας γνωριστούμε.' : 'Καλώς ήρθατε ξανά.'}</h1>
         <p className="biz-muted">{signup ? 'Ένας όμορφος τρόπος να οργανώσετε την επιχείρησή σας.' : 'Τα ραντεβού και η ομάδα σας, σε ένα μέρος.'}</p>
@@ -134,7 +139,7 @@ export default function Business({ onBack, bookings = [] }) {
           <button className="biz-primary" type="submit">{signup ? 'Εγγραφή καταστήματος' : 'Σύνδεση'}<ArrowRight size={17} /></button>
         </form>
         <p className="biz-auth-switch">{signup ? 'Έχετε ήδη λογαριασμό;' : 'Είστε νέος εδώ;'} <button onClick={() => { setSignup(!signup); setNotice(''); }}>{signup ? 'Σύνδεση' : 'Εγγραφή καταστήματος'}</button></p>
-        <div className="biz-auth-divider"><span>ή γνωρίστε το meraki</span></div>
+        <div className="biz-auth-divider"><span>ή γνωρίστε το Eneres</span></div>
         <button className="biz-demo-button" onClick={() => setView('dashboard')}><LayoutDashboard size={18} /> Δείτε τη δοκιμαστική έκδοση <ArrowRight size={17} /></button>
         <p className="biz-small-note">Χωρίς λογαριασμό. Χωρίς πραγματικά δεδομένα ή χρεώσεις.</p>
       </div>
@@ -142,10 +147,10 @@ export default function Business({ onBack, bookings = [] }) {
   </main>;
 
   return <main className="business-page biz-dashboard">
-    <div className="biz-dashboard-top"><button className="biz-back-link" onClick={onBack}><ArrowLeft size={17} /> Επιστροφή στο meraki</button><span className="biz-demo-badge"><span /> Δοκιμαστικό περιβάλλον</span></div>
+    <div className="biz-dashboard-top"><button className="biz-back-link" onClick={onBack}><ArrowLeft size={17} /> Επιστροφή στο Eneres</button><span className="biz-demo-badge"><span /> Δοκιμαστικό περιβάλλον</span></div>
     <div className="biz-dashboard-shell">
       <aside className="biz-sidebar">
-        <span className="biz-brand">meraki<BrandMark /></span><span className="biz-eyebrow">ΓΙΑ ΕΠΑΓΓΕΛΜΑΤΙΕΣ</span>
+        <Brand /><span className="biz-eyebrow">ΓΙΑ ΕΠΑΓΓΕΛΜΑΤΙΕΣ</span>
         <div className="biz-salon-identity"><span className="biz-salon-initial">A</span><div><strong>Atelier Hair Studio</strong><small>Αθήνα · Δοκιμαστικό κατάστημα</small></div></div>
         <div className="biz-sidebar-active"><CalendarDays size={19} /> Ημερολόγιο</div>
         <div className="biz-sidebar-tip"><Scissors size={23} /><strong>Κάθε μέρα, λίγο πιο απλά.</strong><p>Τα online και τα χειροκίνητα ραντεβού σας, συγκεντρωμένα εδώ.</p></div>

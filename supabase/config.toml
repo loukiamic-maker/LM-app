@@ -1,0 +1,4 @@
+# The worker uses its own mandatory server-only bearer secret. Supabase's legacy
+# JWT gateway must not reject that custom bearer before the handler authenticates it.
+[functions.process-notifications]
+verify_jwt = false

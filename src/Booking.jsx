@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, ChevronRight, Clock3, CreditCard, Mail, MapPin, Scissors, ShieldCheck, Store, UserRound, Wallet, X } from 'lucide-react';
 import './booking.css';
+import { platformReady } from './lib/platform';
+import LiveBooking from './LiveBooking';
 
 const euros = (amount) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
 const localISO = (date, timeZone) => {
@@ -21,7 +23,11 @@ const readContact = () => {
   }
 };
 
-export default function Booking({ salon, onClose, onConfirm, bookings = [], initialDate }) {
+export default function Booking(props) {
+  return platformReady ? <LiveBooking {...props}/> : <DemoBooking {...props}/>;
+}
+
+function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) {
   const [step, setStep] = useState(1);
   const [service, setService] = useState(null);
   const [staff, setStaff] = useState('');

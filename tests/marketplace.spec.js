@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+  // Demo regression checks must never contact the deployed production project.
+  await page.route('**/platform-config.js', route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.MERAKI_CONFIG={supabaseUrl:"",supabasePublishableKey:""};',
+  }));
   await page.goto('/');
 });
 

@@ -119,3 +119,23 @@
   .search-bar--compact .search-submit>svg{width:14px;height:14px}
 }
 @media(max-width:360px){.search-bar--compact .search-submit>svg{display:none}}
+
+.brand.eneres-brand{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:72px;flex-shrink:0;font-family:var(--serif);font-size:19px;font-weight:500;letter-spacing:1.5px;line-height:1.25;padding:0}
+.brand.eneres-brand>img{display:block;width:70px;height:46px;object-fit:contain}
+.brand.eneres-brand>span{display:block;margin-top:1px}
+.search-section .hero-assurance{height:13px}
+.overline.overline-space{height:1.6em}
+.photo.photo--placeholder{background-image:none;background-color:#eee5d9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#a18868;font-size:12px}
+.header-inner{gap:22px}
+.appointment-card .appointment-price{min-width:120px}
+@media(max-width:700px){
+  .site-header{height:78px}
+  .search-section .hero-assurance{height:11px}
+  .header-inner{gap:12px}
+  .header-actions{width:auto;flex:1;min-width:0;gap:8px}
+  .brand.eneres-brand{width:58px;font-size:16px}
+  .brand.eneres-brand>img{width:58px;height:42px}
+  .market-select{min-width:0;flex:1;max-width:150px}
+  .market-select select{min-width:0;width:100%;flex:1}
+  .mobile-menu{flex-shrink:0}
+}

@@ -36,11 +36,20 @@ async function expectSearchAboveResults(page) {
 }
 
 test('service icon selection is preserved by city and date search', async ({ page }) => {
+  const citySelect = page.getByLabel('Πόλη ή περιοχή');
+  await expect(page.getByLabel('Επιλογή χώρας')).toHaveCount(0);
+  expect(await citySelect.locator('optgroup').evaluateAll(groups => groups.map(group => ({
+    country: group.label,
+    cities: [...group.querySelectorAll('option')].map(option => option.textContent),
+  })))).toEqual([
+    { country: 'Κύπρος', cities: ['Λάρνακα', 'Λευκωσία', 'Λεμεσός', 'Πάφος', 'Παραλίμνι'] },
+    { country: 'Ελλάδα', cities: ['Αθήνα', 'Θεσσαλονίκη'] },
+  ]);
   const nailsCategory = page.getByRole('button', { name: 'Νύχια', exact: true });
   await nailsCategory.click();
   await expect(nailsCategory).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Υπηρεσία', { exact: true })).toHaveCount(0);
-  await page.getByLabel('Πόλη ή περιοχή').selectOption('Λευκωσία');
+  await citySelect.selectOption('Λευκωσία');
   const dateInput = page.getByLabel('Ημερομηνία ραντεβού');
   const selectedDate = await dateInput.getAttribute('min');
   await dateInput.fill(selectedDate);
@@ -53,9 +62,22 @@ test('service icon selection is preserved by city and date search', async ({ pag
   await expectSearchAboveResults(page);
   await page.getByRole('button', { name: 'Καθαρισμός φίλτρων' }).click();
   await expect(page.locator('.salon-card')).toHaveCount(3);
-  await page.getByLabel('Επιλογή χώρας').selectOption('Κύπρος');
-  await expect(page.locator('.salon-card')).toHaveCount(4);
+  await citySelect.selectOption('Λάρνακα');
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(page.locator('.salon-card')).toHaveCount(1);
+  await expect(page.locator('.salon-card')).toContainText('Still Wellness House');
   await expect(page.locator('.salon-grid')).not.toContainText('Αθήνα');
+  await citySelect.selectOption('Αθήνα');
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(page.locator('.salon-card')).toHaveCount(2);
+  await expect(page.locator('.salon-grid')).toContainText('Atelier Hair Studio');
+  await expect(page.locator('.salon-grid')).toContainText('The Gentlemen’s Club');
+  await expect(page.locator('.salon-grid')).not.toContainText('Still Wellness House');
+  await expectSearchAboveResults(page);
+  await citySelect.selectOption('Πάφος');
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  await expect(page.locator('.salon-card')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα.' })).toBeVisible();
 });
 
 test('favorite survives reload and can be removed from favorites page', async ({ page }) => {

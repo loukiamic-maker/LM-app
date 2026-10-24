@@ -11,7 +11,10 @@ export const categories = [
   { id: 'barber', label: 'Barber shops', shortLabel: 'Barber', icon: 'scissors', photoIndex: 5 },
 ];
 
-export const locations = ['Αθήνα', 'Θεσσαλονίκη', 'Πάτρα', 'Λευκωσία', 'Λεμεσός', 'Λάρνακα'];
+export const locationGroups = [
+  { country: 'Κύπρος', cities: ['Λάρνακα', 'Λευκωσία', 'Λεμεσός', 'Πάφος', 'Παραλίμνι'] },
+  { country: 'Ελλάδα', cities: ['Αθήνα', 'Θεσσαλονίκη'] },
+];
 
 export const salons = [
   {

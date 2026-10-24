@@ -6,7 +6,7 @@ The public website remains a demo while both values in `public/platform-config.j
 
 The source and connected release now contain the owner's public project configuration. The owner has supplied all eight `PASS` results from the installation verification query. Read-only checks confirm that the real directory responds, email/password signup is enabled and email confirmation is required. A browser smoke check against the real directory passes. No real account email or booking has been sent by this validation, and no salon is published yet. Continue with Auth redirects, email delivery, the first real business and hosted acceptance checks below.
 
-The name Eneres and its flower artwork are the current branding. Verisign's authoritative registry reports that `eneres.com` is already registered; this project does not own it. Trademark clearance and alternative domain availability have not been established. Keep the current website address until an available domain is verified and owned. See [the custom-domain guide](custom-domain.md).
+The visible brand and flower artwork remain Eneres. The owner has selected `eneresbeauty.com` as the future address. Verisign RDAP reports no registration record for it, but it has not been purchased, reserved or connected, and registrar availability and pricing need confirmation. `eneres.com` is already registered, and trademark clearance remains unverified. Keep the existing website and Auth URLs until `eneresbeauty.com` is owned and configured. See [the selected-domain guide](custom-domain.md).
 
 ## 1. Create an EU Supabase project
 

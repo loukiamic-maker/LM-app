@@ -1,24 +1,28 @@
 # Eneres custom website address
 
-The public brand is **Eneres**. The [authoritative Verisign registry lookup](https://rdap.verisign.com/com/v1/domain/eneres.com) returned `ENERES.COM` as an existing registration on 24 October 2026. It is not owned or configured by this project. Its listed expiry is not a promise that it will become available. No domain was purchased, no DNS records were changed, and no custom-domain claim was added to the website.
+The owner has selected **eneresbeauty.com** as the future website address. The
+visible brand and floral logo remain **Eneres**. The active website is still
+https://loukiamic-maker.github.io/LM-app/.
 
-An owned `eneres.gr` or `eneres.cy` could also be used. Their availability and registration eligibility have not been checked. Keep the existing GitHub Pages address until the owner chooses and controls the final domain.
+The [authoritative Verisign registry lookup](https://rdap.verisign.com/com/v1/domain/eneresbeauty.com)
+returned HTTP 404 (no registration record found) on 24 October 2026. This is not a
+reservation or a guarantee of registrar availability or pricing. The domain has
+not been purchased or connected by this project. Do not claim it in GitHub Pages,
+publish a `CNAME`, or switch Supabase's primary address until ownership is
+confirmed.
 
-The same Verisign RDAP service returned HTTP 404 (no registration record found)
-for `bookeneres.com` and `eneresbeauty.com` on 24 October 2026. These are candidates
-for a registrar availability and pricing check, not a guarantee that registration
-will succeed. Neither domain has been purchased or configured. Trademark searches
-have not produced authoritative results: EUIPO's search page returned HTTP 403,
-and a reachable TMview landing page alone does not establish trademark status.
+`eneres.com` is already registered to another party. Trademark clearance has not
+been established; EUIPO's search page returned HTTP 403 and a reachable TMview
+landing page alone does not establish trademark status.
 
 ## Choose and verify the domain
 
-1. Check the desired address with a domain registrar. Purchase or use a domain controlled by the website owner; domain registration is separate from GitHub Pages hosting.
+1. Register `eneresbeauty.com` in the website owner's own registrar account after checking the final price and availability. Domain registration is separate from GitHub Pages hosting; it has not been purchased from this chat.
 2. In the GitHub account's **Settings → Pages**, use **Add a domain** to verify ownership. GitHub supplies a TXT record containing the actual verification name and value. Add exactly those values at the DNS provider, then complete verification in GitHub.
 3. Keep the verification TXT record after verification. Preserve unrelated MX, TXT and other records, including email settings.
-4. Only after ownership is established, set the repository's **Settings → Pages → Custom domain** to the chosen address. For example, use `eneres.com` if the owner has acquired it and wants the apex address as the primary website.
+4. Only after ownership is established, set the repository's **Settings → Pages → Custom domain** to the chosen address. Use `eneresbeauty.com` as the primary address after the owner has registered it.
 
-The examples below assume the owner has chosen and controls `eneres.com`. Substitute the actual owned domain throughout if a different address is selected.
+The selected address is `eneresbeauty.com`; the instructions below take effect only after ownership is established. Keep the existing `/LM-app/` deployment and Supabase callback working until the domain migration is ready.
 
 ## DNS for GitHub Pages
 
@@ -50,7 +54,7 @@ npm run build -- --base=/
 
 Publish the contents of `dist/` using the existing Pages deployment process. Do not continue deploying a `/LM-app/` build at the custom domain root: scripts, styles, photos and authentication redirects would otherwise point at the wrong path.
 
-For the current **Deploy from a branch** method, the published `gh-pages` branch root must retain a `CNAME` file containing only the chosen owned hostname, such as `eneres.com`, followed by a newline. Configure the repository's Custom domain setting first and preserve its generated file during subsequent uploads. After ownership and the hostname are confirmed, a matching `public/CNAME` can make Vite include that file in future builds. Do not add a speculative domain to either location now.
+For the current **Deploy from a branch** method, the published `gh-pages` branch root must retain a `CNAME` file containing only the chosen owned hostname, such as `eneresbeauty.com`, followed by a newline. Configure the repository's Custom domain setting first and preserve its generated file during subsequent uploads. After ownership and the hostname are confirmed, a matching `public/CNAME` can make Vite include that file in future builds. Do not add a speculative domain to either location now.
 
 If migrating to a custom GitHub Actions Pages workflow later, use the Pages settings for the custom domain; GitHub's documentation says that workflow-based publishing does not require a `CNAME` file and ignores an existing one.
 
@@ -58,7 +62,7 @@ If migrating to a custom GitHub Actions Pages workflow later, use the Pages sett
 
 1. Wait for GitHub's Pages DNS check to pass and its HTTPS certificate to become available.
 2. Enable **Enforce HTTPS** in the repository's Pages settings when available.
-3. Open both `https://eneres.com/` and `https://www.eneres.com/`; confirm the secondary hostname redirects to the chosen primary hostname and the certificate is valid.
+3. Open both `https://eneresbeauty.com/` and `https://www.eneresbeauty.com/`; confirm the secondary hostname redirects to the chosen primary hostname and the certificate is valid.
 4. Check page reloads, service photos, city filtering, account links and the booking flow on the final hostname. A successful DNS lookup alone does not verify the website.
 5. Test new-account confirmation, password recovery and sign-in redirects after updating the backend settings below.
 
@@ -66,8 +70,8 @@ If migrating to a custom GitHub Actions Pages workflow later, use the Pages sett
 
 When a real Supabase project is connected, update **Authentication → URL Configuration** to match the final primary address:
 
-- **Site URL:** `https://eneres.com/` if that is the chosen primary hostname.
-- **Redirect URLs:** permit the exact root callback `https://eneres.com/` used by this app. Add `https://www.eneres.com/` only if it remains a supported callback origin. Keep a staging or local redirect only while that environment is intentionally in use.
+- **Site URL:** `https://eneresbeauty.com/` if that is the chosen primary hostname.
+- **Redirect URLs:** permit the exact root callback `https://eneresbeauty.com/` used by this app. Add `https://www.eneresbeauty.com/` only if it remains a supported callback origin. Keep a staging or local redirect only while that environment is intentionally in use.
 - Retest email confirmation and password recovery from the production website. The app derives its authentication callback from the current origin and Vite base, which is another reason to build the custom-domain release with `--base=/`.
 
 Changing the domain does not require a service-role key in the browser. Public Supabase project settings remain public configuration; privileged database and email credentials stay in the backend.

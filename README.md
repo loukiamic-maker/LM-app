@@ -4,7 +4,7 @@ Greek beauty and wellness booking website for Greece and Cyprus, with the suppli
 
 The website is configured for the owner's **real Supabase project**. The owner has confirmed all eight installation verification checks pass, and the real public directory and confirmed-email settings respond successfully. The directory has no published salons yet. Email delivery, real customer/owner booking flows and operator details still need completing before inviting customers. Example businesses and local demo bookings are never imported into the live database.
 
-The Eneres name remains provisional. Verisign's registry confirms that **eneres.com is already registered**; it has not been acquired for this project. Trademark availability and alternative domain availability remain unverified.
+The chosen future website address is **eneresbeauty.com**, while the visible brand remains Eneres. Verisign RDAP currently reports no registration record for that address; registrar availability, price and registration are still pending. It has not been purchased or connected. `eneres.com` is already registered, and trademark clearance remains unverified.
 
 ## Run locally
 

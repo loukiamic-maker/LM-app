@@ -6,9 +6,9 @@ export const categories = [
   { id: 'face', label: 'Περιποίηση προσώπου', shortLabel: 'Πρόσωπο', icon: 'flower', photoIndex: 2 },
   { id: 'massage', label: 'Μασάζ & spa', shortLabel: 'Μασάζ', icon: 'leaf', photoIndex: 3 },
   { id: 'makeup', label: 'Μακιγιάζ', shortLabel: 'Μακιγιάζ', icon: 'sparkles', photoIndex: 4 },
-  { id: 'barber', label: 'Barber shops', shortLabel: 'Barber', icon: 'scissors', photoIndex: 5 },
   { id: 'laser', label: 'Αποτρίχωση laser', shortLabel: 'Laser', icon: 'sun', photoIndex: 6 },
   { id: 'brows', label: 'Φρύδια & βλεφαρίδες', shortLabel: 'Φρύδια', icon: 'eye', photoIndex: 7 },
+  { id: 'barber', label: 'Barber shops', shortLabel: 'Barber', icon: 'scissors', photoIndex: 5 },
 ];
 
 export const locations = ['Αθήνα', 'Θεσσαλονίκη', 'Πάτρα', 'Λευκωσία', 'Λεμεσός', 'Λάρνακα'];

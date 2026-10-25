@@ -275,7 +275,7 @@ test('mobile results show editable search controls after searching without float
 test('results stack service over city and brand accents preserve internal sentence punctuation', async ({ page }) => {
   const accent = await page.locator('.hero h1 em').evaluate(element => getComputedStyle(element).color);
   const story = page.locator('.business-banner-copy h2 em');
-  await expect(story).toHaveText('Η επόμενη όμορφη ιστορία');
+  await expect(story).toHaveText('επόμενη όμορφη ιστορία');
   await expect(story).toHaveCSS('color', accent);
   await expect(story).toHaveCSS('font-style', 'italic');
   await page.getByRole('button', { name: 'Barber', exact: true }).click();
@@ -298,7 +298,7 @@ test('results stack service over city and brand accents preserve internal senten
   }
   await page.locator('.footer-nav').getByRole('button', { name: 'Το Eneres', exact: true }).click();
   const about = page.getByRole('dialog');
-  await expect(about.getByRole('heading', { name: 'Eneres: Η φροντίδα σας, πιο κοντά', exact: true })).toBeVisible();
+  await expect(about.getByRole('heading', { name: 'Eneres: η φροντίδα σας, πιο κοντά', exact: true })).toBeVisible();
   await expect(about.locator('.about-brand-name')).toHaveText('Eneres:');
   await expect(about.locator('.about-brand-name')).toHaveCSS('color', accent);
   await expect(about.locator('.about-brand-name')).toHaveCSS('font-style', 'normal');

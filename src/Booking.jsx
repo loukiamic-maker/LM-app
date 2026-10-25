@@ -1,10 +1,11 @@
+import { formatEuro } from './lib/currency';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, ChevronRight, Clock3, CreditCard, Mail, MapPin, Scissors, ShieldCheck, Store, UserRound, Wallet, X } from 'lucide-react';
 import './booking.css';
 import { platformReady } from './lib/platform';
 import LiveBooking from './LiveBooking';
 
-const euros = (amount) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount);
+const euros = formatEuro;
 const localISO = (date, timeZone) => {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
   return ['year', 'month', 'day'].map((type) => parts.find((part) => part.type === type).value).join('-');

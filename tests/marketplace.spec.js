@@ -335,9 +335,9 @@ test('Greek service labels, compact footer order and the client tutorial remain 
       const links = element.querySelector('.eneres-footer-links').getBoundingClientRect();
       const copyright = element.querySelector('.eneres-footer-bottom').getBoundingClientRect();
       const footer = element.getBoundingClientRect();
-      return { logoLeft: logo.left, footerLeft: footer.left, logoBottom: logo.bottom, linksTop: links.top, linksBottom: links.bottom, copyrightTop: copyright.top, divider: parseFloat(getComputedStyle(element.querySelector('.eneres-footer-links')).borderTopWidth), overflow: document.documentElement.scrollWidth > innerWidth };
+      return { logoRight: logo.right, footerRight: footer.right, logoBottom: logo.bottom, linksTop: links.top, linksBottom: links.bottom, copyrightTop: copyright.top, divider: parseFloat(getComputedStyle(element.querySelector('.eneres-footer-links')).borderTopWidth), overflow: document.documentElement.scrollWidth > innerWidth };
     });
-    expect(positions.logoLeft).toBeCloseTo(positions.footerLeft, 0);
+    expect(positions.logoRight).toBeCloseTo(positions.footerRight, 0);
     expect(positions.logoBottom).toBeLessThanOrEqual(positions.linksTop + 1);
     expect(positions.linksBottom).toBeLessThanOrEqual(positions.copyrightTop + 1);
     expect(positions.divider).toBeGreaterThan(0);

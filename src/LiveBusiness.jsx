@@ -1,3 +1,4 @@
+import { formatEuro } from './lib/currency';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, ArrowRight, Bell, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Euro, LoaderCircle, LogOut, MapPin, PlayCircle, Plus, RefreshCw, Scissors, Settings2, ShieldCheck, Trash2, Users, X } from 'lucide-react';
 import { AccountPanel, useAccount } from './Account';
@@ -13,7 +14,7 @@ import BusinessTimeline from './BusinessTimeline';
 import BusinessNotifications, { NotificationButton, NotificationToast, useBusinessNotifications } from './BusinessNotifications';
 import { cancelBookingWithNote } from './lib/businessNotifications';
 
-const money = (amount) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(amount || 0);
+const money = amount => formatEuro(amount || 0);
 const errorText = (error) => error?.userMessage || error?.message || "Κάτι πήγε στραβά. Δοκιμάστε ξανά";
 const timezoneFor = (country) => country === 'Κύπρος' ? 'Europe/Nicosia' : 'Europe/Athens';
 const dateInZone = (date = new Date(), timezone = 'Europe/Athens') => new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(date);

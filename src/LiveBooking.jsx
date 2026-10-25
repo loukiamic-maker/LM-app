@@ -1,3 +1,4 @@
+import { formatEuro } from './lib/currency';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, LoaderCircle, Mail, MapPin, RefreshCw, Scissors, ShieldCheck, Store, UserRound, X } from 'lucide-react';
 import { getSlots } from './lib/platform';
@@ -6,7 +7,7 @@ import PhoneField from './PhoneField';
 import { cleanPhone, isValidMobilePhone } from './lib/phone';
 import './booking.css';
 
-const euros = (value) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(value);
+const euros = formatEuro;
 const isoDate = (date, timeZone) => {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
   return ['year', 'month', 'day'].map((type) => parts.find((part) => part.type === type).value).join('-');

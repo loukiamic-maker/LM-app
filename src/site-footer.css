@@ -1,8 +1,6 @@
 .eneres-site-footer{width:calc(100% - 48px);max-width:1160px;margin:24px auto 0;padding:0 0 22px;color:#93877b}
-.eneres-footer-brand-row{display:flex;justify-content:flex-start;align-items:center;padding:0 0 12px}
-.eneres-site-footer .brand.eneres-brand{width:60px;gap:0;margin:0;font-size:17px;line-height:1.15;letter-spacing:1.3px}
-.eneres-site-footer .brand.eneres-brand>img{width:58px;height:40px;object-fit:contain}
-.eneres-site-footer .brand.eneres-brand>span{margin-top:1px}
+.eneres-footer-brand-row{display:flex;justify-content:flex-end;align-items:center;padding:0 0 12px}
+.eneres-site-footer .brand.eneres-brand{color:var(--ink)}
 .eneres-footer-links{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;border-top:1px solid #e6ded3;padding:10px 0 8px;flex-wrap:wrap}
 .eneres-footer-nav{display:flex;align-items:center;flex-wrap:wrap;gap:2px 22px;min-width:0}
 .eneres-footer-nav>button,.eneres-footer-legal>button{padding:6px 0;min-height:32px;font-size:11px;line-height:1.6;text-align:left;color:inherit}

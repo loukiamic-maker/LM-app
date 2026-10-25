@@ -1,10 +1,11 @@
+import { formatEuroCents } from './lib/currency';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, CreditCard, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useAccount } from './Account';
 import { getBusinessBilling, managementError, startSubscriptionCheckout } from './lib/admin';
 import './business-billing.css';
 
-const money = cents => cents == null ? 'Δεν έχει οριστεί' : new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(Number(cents) / 100);
+const money = cents => cents == null ? 'Δεν έχει οριστεί' : formatEuroCents(cents);
 const date = (value, timezone) => value ? new Date(String(value).length === 10 ? `${value}T12:00:00Z` : value).toLocaleDateString('el-GR', { timeZone: timezone, day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const subscriptionLabels = { pending: 'Σε αναμονή', active: 'Ενεργή', past_due: 'Εκκρεμεί πληρωμή', cancelled: 'Ακυρωμένη' };
 const chargeLabels = { pending: 'Σε εκκρεμότητα', paid: 'Εξοφλημένη', void: 'Ακυρωμένη' };

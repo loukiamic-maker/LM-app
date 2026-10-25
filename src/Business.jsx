@@ -1,3 +1,4 @@
+import { formatEuro } from './lib/currency';
 import { platformReady } from './lib/platform';
 import LiveBusiness from './LiveBusiness';
 import Brand from './Brand';
@@ -5,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Eye, EyeOff, LayoutDashboard, LockKeyhole, Mail, Plus, Scissors, TrendingUp, Users, X } from 'lucide-react';
 import './business.css';
 
-const money = (amount) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+const money = formatEuro;
 const dateKey = (date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Athens' }).format(date);
 const dayLabel = (date, options) => new Intl.DateTimeFormat('el-GR', { timeZone: 'Europe/Athens', ...options }).format(date);
 const shiftDate = (date, days) => { const next = new Date(date); next.setUTCDate(next.getUTCDate() + days); return next; };

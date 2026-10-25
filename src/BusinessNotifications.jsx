@@ -1,3 +1,4 @@
+import { formatEuroCents } from './lib/currency';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell, CalendarDays, CheckCheck, ChevronRight, Clock3, LoaderCircle, Mail, Phone, RefreshCw, X } from 'lucide-react';
 import { acknowledgeBusinessBooking, bookingAlertError, cancelBusinessBooking, listBusinessBookingAlerts } from './lib/businessNotifications';
@@ -5,7 +6,7 @@ import './business-notifications.css';
 
 const pageSize = 100;
 const statusLabels = { new: 'Νέα κράτηση', noted: 'Η κράτηση σημειώθηκε', cancelled: 'Ακυρώθηκε' };
-const money = value => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(Number(value || 0) / 100);
+const money = value => formatEuroCents(value || 0);
 const date = (value, timezone, options = {}) => value ? new Intl.DateTimeFormat('el-GR', { timeZone: timezone || 'Europe/Athens', day: 'numeric', month: 'short', year: 'numeric', ...options }).format(new Date(value)) : '—';
 const time = (value, timezone) => value ? new Intl.DateTimeFormat('el-GR', { timeZone: timezone || 'Europe/Athens', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value)) : '—';
 const alertStatus = alert => alert.booking_status === 'cancelled' ? 'cancelled' : alert.status;

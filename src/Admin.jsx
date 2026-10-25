@@ -1,3 +1,4 @@
+import { formatEuroCents } from './lib/currency';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, CalendarDays, CheckCircle2, Copy, CreditCard, Euro, FileCheck2, LoaderCircle, RefreshCw, ShieldCheck, Store, Users, Video, X } from 'lucide-react';
 import Brand from './Brand';
@@ -6,7 +7,7 @@ import { createBusinessCharge, getAdminOverview, getAdminSalon, getAdminSalons, 
 import './admin.css';
 import { tutorialGuides, tutorialShareUrl } from './lib/tutorials';
 
-const currency = cents => cents == null ? 'Δεν έχει οριστεί' : new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(Number(cents) / 100);
+const currency = cents => cents == null ? 'Δεν έχει οριστεί' : formatEuroCents(cents);
 const number = value => value == null ? '—' : new Intl.NumberFormat('el-GR').format(Number(value));
 const displayDate = value => value ? new Date(String(value).length === 10 ? `${value}T12:00:00Z` : value).toLocaleDateString('el-GR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const addDay = (value, amount) => { const date = new Date(`${value}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + amount); return date.toISOString().slice(0, 10); };

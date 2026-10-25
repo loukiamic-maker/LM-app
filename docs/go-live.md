@@ -1,6 +1,8 @@
 # Connect Eneres to real bookings
 
-Eneres includes a hosted Supabase backend for customer accounts, business ownership, availability and **payment at the salon**. No card or Apple Pay charge is implemented.
+Eneres includes a hosted Supabase backend for customer accounts, business ownership, availability and **payment at the salon**. Customer card or Apple Pay charges are not implemented.
+Monthly business subscription records and a server-side Stripe integration are
+provided separately; real recurring card collection requires secure provider setup.
 
 The connected public website uses the real project settings in
 `public/platform-config.js`. Production builds load a content-versioned copy so
@@ -21,13 +23,26 @@ The visible brand and flower artwork remain Eneres. The owner has selected `ener
 3. Generate a strong database password and keep it in your password manager. It is an administrator credential; it does not go in this website, GitHub, or chat.
 4. Wait until the project is running. Record its project reference and project URL from the project settings.
 
-Use a new, empty project for the initial migration below. A project used by another application needs a separate migration review.
+Use a new, empty project for the initial migration below. **The current Eneres
+project already has the original booking installation; do not recreate it. Use
+only the 002/003 upgrade described below.** A project used by another application
+needs a separate migration review.
 
 ## 2. Create the database
 
-In the project's **SQL Editor**, open a new query, paste the complete contents of this repository file, and run it once:
+For a new project, use its privileged **SQL Editor** to run the complete files in this order:
 
-[`supabase/migrations/202610240001_booking_platform.sql`](../supabase/migrations/202610240001_booking_platform.sql)
+1. [`202610240001_booking_platform.sql`](../supabase/migrations/202610240001_booking_platform.sql)
+2. [`202610240002_owner_calendar.sql`](../supabase/migrations/202610240002_owner_calendar.sql)
+3. [`202610240003_admin_billing.sql`](../supabase/migrations/202610240003_admin_billing.sql)
+
+For an existing project with the original tables, **skip 001 and apply only 002
+then 003**. Both additive upgrades are safe to rerun and preserve existing records.
+The release includes a combined upgrade file generated with
+`scripts/package-admin-upgrade.mjs`; it also optionally grants the designated
+verified account administrator access. An absent/unconfirmed account does not
+roll back the schema upgrade. Do not run the initial installer again when
+`profiles` already exists.
 
 Use the normal privileged SQL Editor connection for project administration. The migration creates the application tables, ownership rules, booking transactions, double-booking constraints and private notification queue. It does not create example salons or customer accounts.
 
@@ -125,28 +140,33 @@ Do not publish the fictional businesses, prices, reviews or generated salon pict
 
 The platform administrator reviews the actual business, its owner/contact details, address, services, prices, working hours, cancellation policy and permission to use its photographs. The current owner interface does not upload salon photographs; the administrator can set an authorized, publicly accessible HTTPS photograph in `public.salons.image_url` during review. Generated category artwork is not evidence of a real salon's appearance.
 
-In the Supabase SQL Editor, find pending listings:
+Create and confirm the administrator's normal website account. In the privileged
+SQL Editor, use [`supabase/activate-admin.sql`](../supabase/activate-admin.sql) with
+the designated email address, or the release's personalized combined upgrade.
+This assigns a trusted server role only to a verified existing account; the app
+never grants administrator rights based on an email entered in a form.
 
-```sql
-select id, name, city, country, address, status
-from public.salons
-where status = 'pending'
-order by created_at;
-```
+Open `https://loukiamic-maker.github.io/LM-app/#admin`, sign in with that account,
+and select **Ανανέωση πρόσβασης** if the role was granted after sign-in. In
+**Αιτήματα επιχειρήσεων**, inspect the real owner, address, services, staff and hours,
+then approve or reject the actual request. Rejection requires a reason. An approval
+publishes the reviewed salon; a normal salon owner cannot perform that operation.
+Return to the marketplace to verify its intended address, prices and photograph.
 
-After verifying the selected business, replace the UUID below with that listing's actual ID and run:
+The **Επισκόπηση** tab uses actual server statistics. In **Μηνιαίες συνδρομές**, set
+the agreed monthly euro amount; the installation deliberately leaves it unset.
+You can record manually received business subscription payments, which does not
+collect money. For real recurring card collection, follow the
+[Stripe activation guide](../supabase/functions/create-subscription-checkout/README.md),
+configure private provider settings, deploy checkout and webhook functions, and
+complete Stripe test-mode verification first. Missing provider configuration
+shows an unavailable message to the business rather than a false success.
 
-```sql
-update public.salons
-set status = 'published'
-where id = 'REPLACE_WITH_REVIEWED_SALON_UUID'::uuid
-  and status = 'pending'
-returning id, name, status;
-```
-
-The result must identify the intended business and show `published`. This is an administrator action; do not give project SQL access or an administrator key to salon customers or owners to make it possible. A normal owner session is deliberately unable to publish.
-
-Reload the public website and verify that the listing appears with the intended address, services, prices and image. Then confirm that a real owner's calendar shows that owner's salon only.
+Business owners can use their calendar's add/edit controls for offline appointments.
+These are saved to the same server calendar and block overlapping online slots.
+Check an actual owner entry from a second consumer session, then move/cancel it
+and confirm that the old time becomes available again. Manual entries never
+fabricate a customer account or trigger automatic customer email.
 
 ## 7. Enable appointment notifications
 
@@ -228,7 +248,7 @@ Use accounts and a real participating business you control or have permission to
 2. Make an actual controlled pay-at-salon booking. Check that the customer sees its date, staff member, agreed price and payment-at-salon status; check that the owner sees the same booking on the correct local date.
 3. Open a second browser session and confirm the reserved interval is unavailable. If a slot is taken during confirmation, the customer must get an error rather than a false success.
 4. Test a permitted reschedule and cancellation. The server must preserve the original booking if rescheduling fails and enforce the customer's cutoff.
-5. Check working-hour intervals and an absence against actual availability.
+5. Check working-hour intervals, an absence and an owner-created offline appointment against actual availability. Edit and cancel the offline appointment; confirm old slots reopen and overlapping online attempts fail.
 6. After a test appointment starts, use the owner calendar to complete it. Mark it paid only when the payment was actually received at the venue; this does not charge a card or generate a tax receipt.
 7. Confirm customer and owner notification emails. Test with a second customer/owner account that private bookings and other owners' settings are inaccessible.
 

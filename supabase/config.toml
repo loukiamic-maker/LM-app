@@ -2,3 +2,9 @@
 # JWT gateway must not reject that custom bearer before the handler authenticates it.
 [functions.process-notifications]
 verify_jwt = false
+
+[functions.create-subscription-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false

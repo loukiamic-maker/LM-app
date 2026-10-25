@@ -17,7 +17,7 @@ if ! docker image inspect "$image" >/dev/null 2>&1; then docker pull "$image"; f
 docker run --name "$container" --network none -e POSTGRES_HOST_AUTH_METHOD=trust -d "$image" >/dev/null
 ready=false
 for _ in {1..60}; do
-  if docker exec "$container" pg_isready -U postgres >/dev/null 2>&1; then ready=true; break; fi
+  if docker logs "$container" 2>&1 | rg -q 'PostgreSQL init process complete' && docker exec "$container" pg_isready -U postgres >/dev/null 2>&1; then ready=true; break; fi
   sleep 0.5
 done
 if [[ "$ready" != true ]]; then docker logs "$container"; exit 1; fi
@@ -26,9 +26,11 @@ psql_test < "$repo_root/supabase/tests/bootstrap.sql" > "$run_dir/bootstrap.log"
 for migration in "$repo_root"/supabase/migrations/*.sql; do
   psql_test < "$migration" > "$run_dir/migration.log" 2>&1 || { cat "$run_dir/migration.log"; exit 1; }
 done
-psql_test < "$repo_root/supabase/tests/platform.sql" > "$run_dir/platform.log" 2>&1 || { cat "$run_dir/platform.log"; exit 1; }
-# Show substantive outcomes without fixture PII or SQL chatter.
-rg 'NOTICE:  PASS:' "$run_dir/platform.log" || cat "$run_dir/platform.log"
+for test_file in platform owner_calendar admin_billing; do
+  psql_test < "$repo_root/supabase/tests/$test_file.sql" > "$run_dir/$test_file.log" 2>&1 || { cat "$run_dir/$test_file.log"; exit 1; }
+  # Show substantive outcomes without fixture PII or SQL chatter.
+  rg 'NOTICE:  PASS:' "$run_dir/$test_file.log" || cat "$run_dir/$test_file.log"
+done
 
 # Two independent sessions race for the same slot. Hold the winning transaction open
 # so the other session genuinely contends instead of issuing a sequential request.
@@ -83,4 +85,5 @@ select test.fails($q$insert into public.bookings(salon_id,service_id,staff_id,cu
 select salon_id,service_id,staff_id,customer_id,starts_at+interval '15 minutes',ends_at+interval '15 minutes',customer_name,customer_email,service_name,salon_name,staff_name,country,timezone,cancellation_hours,price_cents,gen_random_uuid()
 from public.bookings where idempotency_key='50000000-0000-0000-0000-000000000003'$q$,'23P01','database exclusion constraint independently rejects overlap');
 SQL
-echo 'PASS: exact migration, RLS/booking assertions, concurrent conflicts and retries completed.'
+bash "$repo_root/scripts/test-owner-calendar-race.sh" "$container"
+echo 'PASS: exact migrations, administration, billing, shared-calendar isolation, concurrent conflicts and retries completed.'

@@ -15,7 +15,7 @@ const publicSalon = {
   id: ids.salon, owner_id: 'another-owner', name: 'Δημοσιευμένος Χώρος',
   category: 'hair', city: 'Αθήνα', country: 'Ελλάδα', address: 'Σόλωνος 10',
   timezone: 'Europe/Athens', status: 'published', cancellation_hours: 24,
-  description: 'Καταχώριση από την απάντηση του καταλόγου.', image_url: null,
+  description: "Καταχώριση από την απάντηση του καταλόγου", image_url: null,
   services: [{ id: ids.service, salon_id: ids.salon, name: 'Κούρεμα από κατάλογο', duration_minutes: 60, price_cents: 3500, active: true }],
   staff: [{ id: ids.staff, salon_id: ids.salon, name: 'Επαγγελματίας Διακομιστή', active: true }],
 };
@@ -121,7 +121,7 @@ async function login(page, alreadyOpen = false) {
   await panel.getByLabel('Email', { exact: true }).fill(account.email);
   await panel.getByLabel(/^Κωδικός πρόσβασης/).fill('test-password-123');
   await panel.getByRole('button', { name: 'Σύνδεση', exact: true }).click();
-  await expect(panel.getByRole('heading', { name: 'Το προφίλ σας.', exact: true })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: "Το προφίλ σας", exact: true })).toBeVisible();
   await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού' }).click();
 }
 
@@ -192,7 +192,7 @@ test('date search shows only venues with real server availability for the select
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   await expect.poll(() => state.calls.some(call => call.path.endsWith('/get_availability') && call.body.p_date === unavailableDate)).toBe(true);
   await expect(page.locator('.salon-card')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα" })).toBeVisible();
   await date.fill(availableDate);
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   await expect.poll(() => state.calls.some(call => call.path.endsWith('/get_availability') && call.body.p_date === availableDate)).toBe(true);
@@ -219,7 +219,7 @@ test('booking conflict refreshes availability and never displays false confirmat
   const dialog = await checkout(page);
   await dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ }).click();
   await expect(dialog.getByRole('alert')).toContainText('δεν είναι πλέον διαθέσιμη');
-  await expect(dialog.getByRole('heading', { name: 'Βρείτε τη δική σας στιγμή.' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: "Βρείτε τη δική σας στιγμή" })).toBeVisible();
   await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Συνέχεια στην επιβεβαίωση' })).toBeDisabled();
   expect(state.bookings).toEqual([]);
@@ -255,13 +255,13 @@ test('business creates a server-side draft and clears private forms when another
   await page.goto('/'); await login(page);
   await page.locator('.header-actions').getByRole('button', { name: /Για επαγγελματίες/ }).click();
   await page.getByLabel('Όνομα επιχείρησης').fill('Νέα Επιχείρηση Ιδιοκτήτη');
-  await page.getByLabel('Πόλη', { exact: true }).fill('Αθήνα');
+  await page.getByRole('combobox', { name: 'Πόλη', exact: true }).selectOption('Αθήνα');
   await page.getByLabel('Διεύθυνση', { exact: true }).fill('Σόλωνος 10');
   await page.getByRole('button', { name: 'Δημιουργία πρόχειρης επιχείρησης' }).click();
   await expect(page.locator('.lb-sidebar')).toContainText('Πρόχειρο');
   await expect(page.getByRole('button', { name: 'Υποβολή για έλεγχο' })).toBeDisabled();
   await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Ημερολόγιο', exact: true }).click();
-  await expect(page.getByText('Δεν υπάρχουν κρατήσεις για αυτή την ημερομηνία.', { exact: true })).toBeVisible();
+  await expect(page.getByText("Δεν υπάρχουν κρατήσεις για αυτή την ημερομηνία", { exact: true })).toBeVisible();
   await expect(page.locator('.biz-appointment,.lb-booking-row')).toHaveCount(0);
   await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Υπηρεσίες', exact: true }).click();
   await page.getByRole('button', { name: 'Νέα υπηρεσία', exact: true }).click();
@@ -284,7 +284,7 @@ test('business creates a server-side draft and clears private forms when another
     await otherTab.goto('/');
     await otherTab.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
     const accountPanel = otherTab.locator('.account-panel');
-    await expect(accountPanel.getByRole('heading', { name: 'Το προφίλ σας.', exact: true })).toBeVisible();
+    await expect(accountPanel.getByRole('heading', { name: "Το προφίλ σας", exact: true })).toBeVisible();
     await accountPanel.getByRole('button', { name: 'Αποσύνδεση', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Νέα υπηρεσία' })).toHaveCount(0);
     await expect(page.locator('.lb-sidebar')).toHaveCount(0);
@@ -297,7 +297,7 @@ test('invalid platform configuration fails closed instead of falling back to exa
   await page.route('**/platform-config.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.MERAKI_CONFIG=${JSON.stringify({ supabaseUrl: 'http://invalid-backend.example', supabasePublishableKey: 'sb_secret_forbidden_in_browser' })};` }));
   await page.route('https://*.supabase.co/**', route => { requests.push(route.request().url()); return route.abort(); });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Η σύνδεση της υπηρεσίας χρειάζεται έλεγχο.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Η σύνδεση της υπηρεσίας χρειάζεται έλεγχο" })).toBeVisible();
   await expect(page.locator('.salon-card')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Κλείστε ραντεβού/ })).toHaveCount(0);
   expect(requests).toEqual([]);
@@ -323,7 +323,7 @@ test('owner records venue payment for a completed unpaid appointment and sees re
   await row.click();
   const detail = page.getByRole('dialog', { name: 'Λεπτομέρειες ραντεβού' });
   await expect(detail).toContainText('Ανεξόφλητο');
-  await expect(detail).toContainText('Δεν γίνεται ηλεκτρονική χρέωση.');
+  await expect(detail).toContainText("Δεν γίνεται ηλεκτρονική χρέωση");
   await detail.getByRole('button', { name: 'Καταχώριση εξόφλησης στο κατάστημα', exact: true }).click();
   await expect(detail).toHaveCount(0);
   await expect(row).toContainText('Εξοφλημένο στο κατάστημα');
@@ -335,5 +335,24 @@ test('owner records venue payment for a completed unpaid appointment and sees re
   await row.click();
   await expect(page.getByRole('dialog', { name: 'Λεπτομέρειες ραντεβού' })).toContainText('Εξοφλημένο');
   await expect(page.getByRole('button', { name: 'Καταχώριση εξόφλησης στο κατάστημα', exact: true })).toHaveCount(0);
+  expect(state.unexpected).toEqual([]);
+});
+
+test('an offline reservation removes a selected consumer slot when the checkout regains focus', async ({ page }) => {
+  const state = await mockPlatform(page);
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toBeEnabled();
+  const checksBefore = state.calls.filter(call => call.path.endsWith('/get_availability')).length;
+  // The authoritative availability response changes after an offline reservation.
+  // No customer-side booking is submitted by this scenario.
+  state.unavailableDates = [futureDate()];
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect.poll(() => state.calls.filter(call => call.path.endsWith('/get_availability')).length).toBeGreaterThan(checksBefore);
+  await expect(dialog.getByRole('heading', { name: /^Βρείτε τη δική σας στιγμή\.?$/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Συνέχεια στην επιβεβαίωση', exact: true })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toHaveCount(0);
+  expect(state.calls.some(call => call.path.endsWith('/create_booking'))).toBe(false);
   expect(state.unexpected).toEqual([]);
 });

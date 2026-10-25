@@ -95,8 +95,8 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
   const complete = (event) => {
     event.preventDefault();
     if (submitted.current) return;
-    if (name.trim().length < 2) { setError('Γράψτε το όνομά σας με τουλάχιστον δύο χαρακτήρες, χωρίς να μετράνε τα κενά.'); return; }
-    if (!canContinue) { setError('Η ώρα αυτή δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα.'); setStep(2); return; }
+    if (name.trim().length < 2) { setError('Γράψτε το όνομά σας με τουλάχιστον δύο χαρακτήρες, χωρίς να μετράνε τα κενά'); return; }
+    if (!canContinue) { setError('Η ώρα αυτή δεν είναι πλέον διαθέσιμη Επιλέξτε μια νέα ώρα'); setStep(2); return; }
     submitted.current = true;
     const booking = {
       id: crypto.randomUUID(), salonId: salon.id, salonName: salon.name,
@@ -108,7 +108,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
       setConfirmed(true);
     } catch {
       submitted.current = false;
-      setError('Η κράτηση δεν αποθηκεύτηκε. Προσπαθήστε ξανά.');
+      setError('Η κράτηση δεν αποθηκεύτηκε Προσπαθήστε ξανά');
     }
   };
 
@@ -116,22 +116,22 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
     <section ref={dialog} className={`booking-dialog ${confirmed ? 'booking-dialog-success' : ''}`} role="dialog" aria-modal="true" aria-labelledby="booking-title">
       <div className="booking-handle" />
       <div className="booking-topline">
-        {step > 1 && !confirmed ? <button className="booking-icon-button" aria-label="Προηγούμενο βήμα" onClick={() => setStep(step - 1)}><ArrowLeft size={20}/></button> : <span className="booking-brand">Η στιγμή σας.</span>}
+        {step > 1 && !confirmed ? <button className="booking-icon-button" aria-label="Προηγούμενο βήμα" onClick={() => setStep(step - 1)}><ArrowLeft size={20}/></button> : <span className="booking-brand">Η στιγμή σας</span>}
         <button ref={closeButton} className="booking-icon-button" aria-label="Κλείσιμο κράτησης" onClick={onClose}><X size={20}/></button>
       </div>
 
       {confirmed ? <div className="booking-success">
         <div className="booking-success-icon"><CheckCircle2 size={38}/></div>
         <span className="booking-eyebrow">ΜΙΑ ΜΙΚΡΗ ΣΤΙΓΜΗ, ΜΟΝΟ ΓΙΑ ΕΣΑΣ</span>
-        <h2 id="booking-title">Η δοκιμαστική σας κράτηση<br/>αποθηκεύτηκε.</h2>
-        <p>Ευχαριστούμε, {name.trim()}! Η δοκιμαστική κράτησή σας αποθηκεύτηκε σε αυτή τη συσκευή.</p>
+        <h2 id="booking-title">Η δοκιμαστική σας κράτηση<br/>αποθηκεύτηκε</h2>
+        <p>Ευχαριστούμε, {name.trim()}! Η δοκιμαστική κράτησή σας αποθηκεύτηκε σε αυτή τη συσκευή</p>
         <div className="booking-success-details">
           <strong>{salon.name}</strong><span>{service.name}</span>
           <div><CalendarDays size={17}/>{dayLabel(date, timeZone, { weekday: 'long', day: 'numeric', month: 'long' })} · {time}</div>
           <div><UserRound size={17}/>{staff}</div>
           <div><Store size={17}/>Πληρωμή στο κατάστημα · {euros(service.price)}</div>
         </div>
-        <p className="booking-local-note">Πρόκειται για επίδειξη. Δεν έχει ενημερωθεί πραγματικό κατάστημα και δεν έχει πραγματοποιηθεί χρέωση.</p>
+        <p className="booking-local-note">Πρόκειται για επίδειξη Δεν έχει ενημερωθεί πραγματικό κατάστημα και δεν έχει πραγματοποιηθεί χρέωση</p>
         <button className="booking-primary" onClick={onClose}>Υπέροχα, ευχαριστώ <Check size={18}/></button>
       </div> : <>
         <div className="booking-progress" aria-label={`Βήμα ${step} από 3`}>
@@ -139,8 +139,8 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
         </div>
         <div className="booking-heading">
           <span className="booking-eyebrow">{salon.name}</span>
-          <h2 id="booking-title">{step === 1 ? 'Τι θα κάνετε για εσάς;' : step === 2 ? 'Βρείτε τη δική σας στιγμή.' : 'Λίγο πριν την ομορφιά.'}</h2>
-          <p>{step === 1 ? 'Επιλέξτε την υπηρεσία που σας ταιριάζει.' : step === 2 ? 'Επιλέξτε επαγγελματία, ημέρα και ώρα.' : 'Ελέγξτε τα στοιχεία και ολοκληρώστε την κράτηση.'}</p>
+          <h2 id="booking-title">{step === 1 ? 'Τι θα κάνετε για εσάς;' : step === 2 ? 'Βρείτε τη δική σας στιγμή' : 'Λίγο πριν την ομορφιά'}</h2>
+          <p>{step === 1 ? 'Επιλέξτε την υπηρεσία που σας ταιριάζει' : step === 2 ? 'Επιλέξτε επαγγελματία, ημέρα και ώρα' : 'Ελέγξτε τα στοιχεία και ολοκληρώστε την κράτηση'}</p>
         </div>
 
         {step === 1 && <div className="booking-step-content">
@@ -153,7 +153,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
               <span className="booking-radio">{service?.name === item.name && <span/>}</span>
             </button>)}
           </div>
-          <div className="booking-reassurance"><ShieldCheck size={17}/>Χωρίς έξοδα κράτησης. Με τον δικό σας ρυθμό.</div>
+          <div className="booking-reassurance"><ShieldCheck size={17}/>Χωρίς έξοδα κράτησης Με τον δικό σας ρυθμό</div>
           <button className="booking-primary" disabled={!service} onClick={() => setStep(2)}>Συνέχεια <ArrowRight size={18}/></button>
         </div>}
 
@@ -173,7 +173,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
           <div className="booking-times">
             {salon.availability.map((slot) => <button key={slot} disabled={unavailable(slot)} className={time === slot ? 'is-selected' : ''} onClick={() => setTime(slot)} aria-pressed={time === slot}>{slot}</button>)}
           </div>
-          {salon.availability.every(unavailable) && <p className="booking-empty">Δεν υπάρχουν διαθέσιμες ώρες. Επιλέξτε άλλη ημέρα ή άλλον επαγγελματία.</p>}
+          {salon.availability.every(unavailable) && <p className="booking-empty">Δεν υπάρχουν διαθέσιμες ώρες Επιλέξτε άλλη ημέρα ή άλλον επαγγελματία</p>}
           {error && <p className="booking-error" role="alert">{error}</p>}
           <div className="booking-selection-summary"><Scissors size={17}/><span>{service.name}</span><strong>{euros(service.price)}</strong></div>
           <button className="booking-primary" disabled={!canContinue} onClick={() => { setError(''); setStep(3); }}>Συνέχεια στην επιβεβαίωση <ArrowRight size={18}/></button>
@@ -197,7 +197,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
             <button type="button" disabled><Wallet size={19}/><span>Apple Pay</span><small>Σύντομα</small></button>
           </div>
           <div className="booking-total"><div><span>Υπηρεσία</span><span>{euros(service.price)}</span></div><div><strong>Σύνολο</strong><strong>{euros(service.price)}</strong></div></div>
-          <p className="booking-local-note"><ShieldCheck size={14}/>Δοκιμαστική κράτηση: αποθηκεύεται μόνο σε αυτή τη συσκευή. Δεν ενημερώνεται πραγματικό κατάστημα και δεν γίνεται χρέωση.</p>
+          <p className="booking-local-note"><ShieldCheck size={14}/>Δοκιμαστική κράτηση: αποθηκεύεται μόνο σε αυτή τη συσκευή Δεν ενημερώνεται πραγματικό κατάστημα και δεν γίνεται χρέωση</p>
           {error && <p className="booking-error" role="alert">{error}</p>}
           <button className="booking-primary" type="submit">Επιβεβαίωση ραντεβού · {euros(service.price)} <ArrowRight size={17}/></button>
         </form>}

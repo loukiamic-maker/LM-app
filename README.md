@@ -23,14 +23,18 @@ npm run dev
 Follow [the step-by-step launch guide](docs/go-live.md). In brief:
 
 1. Create an owner-controlled Supabase project in an EU region.
-2. Apply the exact SQL migration in `supabase/migrations/` using the project's SQL Editor. Never apply the test bootstrap to a hosted project.
+2. Apply the SQL migrations in order using the project's SQL Editor. An existing installation needs only the additive `002` and `003` upgrades; do not repeat the initial `001` installer. Never apply the test bootstrap to a hosted project.
 3. Configure confirmed email/password Auth and the permitted website redirect URLs.
 4. Put only the public Project URL and publishable/anon key into `public/platform-config.js`, or use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` when building. The build rejects privileged keys and credential-bearing URLs. Never publish a service-role key, database password or email-provider secret.
 5. Configure the private notification worker, verified email sender and scheduler as described in [the backend guide](supabase/README.md).
 6. Create the first real business through the owner dashboard, add services, staff, hours and photos, submit it for review, then approve it as administrator.
 7. Verify hosted signup, login, booking, notifications, cancellation/rescheduling and business access. Add the real operator's privacy/contact/terms information before public commercial launch.
 
-The application includes customer signup/verification/login/password recovery, server-confirmed bookings, customer history/cancellation/rescheduling, owner onboarding and catalogue/schedule/time-off management, a shared business calendar, and manual records of payments received **at the salon**. No online card collection or card charges are implemented.
+The application includes customer signup/verification/login/password recovery, server-confirmed bookings, customer history/cancellation/rescheduling, owner onboarding and catalogue/schedule/time-off management, and manual records of payments received **at the salon**. Businesses can add and edit offline appointments in their shared calendar; those appointments block overlapping online availability immediately after a successful database save.
+
+The administrator dashboard is at [`/#admin`](https://loukiamic-maker.github.io/LM-app/#admin). It provides business approval, statistics, a configurable monthly subscription price and billing records. Access requires a confirmed account granted the trusted administrator role through the project's SQL Editor; an email address alone never grants access. See [`supabase/activate-admin.sql`](supabase/activate-admin.sql) and the upgrade instructions in [the backend guide](supabase/README.md).
+
+Server functions for Stripe-hosted monthly **business subscriptions** are supplied, but require the operator's Stripe account, private server settings, deployed functions and signed webhook before accepting card payments. No live payment connection is implied by deploying the website. Customer appointments continue to be paid at the salon.
 
 Date searches check the real availability RPC for active services before showing
 matching salons. Each search limits requests to four at a time, stale results are

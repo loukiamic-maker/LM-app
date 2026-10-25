@@ -1,0 +1,133 @@
+\set ON_ERROR_STOP on
+begin;
+reset role;
+set local request.jwt.claims='{}';
+-- These are isolated local fixtures only; no business/account data is seeded by migrations.
+insert into public.salons(id,owner_id,name,category,city,country,address,status) values
+ ('73000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','Review Fixture','hair','Αθήνα','Ελλάδα','Fixture Street 10','pending'),
+ ('73000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000006','Unready Fixture','nails','Λευκωσία','Κύπρος','Fixture Street 20','pending');
+insert into public.services(id,salon_id,name,duration_minutes,price_cents) values
+ ('72000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','Review Service',60,4200);
+insert into public.staff(id,salon_id,name) values
+ ('71000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','Review Professional');
+insert into public.staff_hours(staff_id,weekday,opens_at,closes_at) select '71000000-0000-0000-0000-000000000001',d,'09:00','18:00' from generate_series(0,6)d;
+
+set local role anon;
+set local request.jwt.claims='{"role":"anon"}';
+select test.fails('select public.admin_overview(30)','42501','anonymous cannot inspect administration');
+select test.fails('select * from public.business_charges','42501','anonymous cannot read business charges');
+select test.fails('select public.billing_enable_stripe(true)','42501','anonymous cannot enable payment provider');
+
+set local role authenticated;
+set local request.jwt.claims='{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated","user_metadata":{"role":"admin"}}';
+select test.fails('select public.admin_overview(30)','42501','owner metadata cannot grant platform administration');
+select test.fails('select public.admin_list_salons(null)','42501','business owner cannot inspect other owners');
+select test.fails($q$select public.admin_review_salon('73000000-0000-0000-0000-000000000001','published','approve')$q$,'42501','business owner cannot approve own business');
+select test.fails('select public.admin_set_platform_billing(1,true)','42501','business owner cannot set subscription prices');
+select test.fails($q$select public.admin_set_business_subscription('73000000-0000-0000-0000-000000000001',1,'active','manual')$q$,'42501','business owner cannot grant own active subscription');
+select test.fails('select public.billing_enable_stripe(true)','42501','signed-in owner cannot forge provider readiness');
+select test.fails($q$select public.billing_checkout_context('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001')$q$,'42501','browser cannot impersonate checkout service');
+select test.fails($q$select public.apply_stripe_billing_event('evt_forged','invoice.paid','{}')$q$,'42501','browser cannot forge paid webhook');
+select test.ok((select count(*) from public.platform_billing_settings)=0,'owner cannot read admin-only settings table');
+select test.ok((public.get_business_billing('73000000-0000-0000-0000-000000000001')->'plan'->'monthly_price_cents')='null'::jsonb,'unconfigured plan has no invented price');
+select test.ok((public.get_business_billing('73000000-0000-0000-0000-000000000001')->>'online_checkout_available')::boolean=false,'online payment unavailable until configured');
+select test.fails($q$select public.get_business_billing('73000000-0000-0000-0000-000000000002')$q$,'42501','owner cannot inspect other business billing');
+
+set local request.jwt.claims='{"sub":"00000000-0000-0000-0000-000000000005","role":"authenticated"}';
+select test.ok(jsonb_array_length(public.admin_list_salons('pending'))>=2,'server-appointed administrator sees pending requests');
+select test.ok(public.admin_get_salon('73000000-0000-0000-0000-000000000001')->'owner'->>'email'='owner@example.test','administrator sees actual owner contact');
+select test.ok(jsonb_array_length(public.admin_get_salon('73000000-0000-0000-0000-000000000001')->'services')=1,'administrator sees private pending services');
+select test.ok(jsonb_array_length(public.admin_get_salon('73000000-0000-0000-0000-000000000001')->'hours')=7,'administrator sees pending staff hours');
+select test.fails($q$select public.admin_review_salon('73000000-0000-0000-0000-000000000002','published','')$q$,'23514','administrator approval still requires usable business setup');
+select test.ok(public.admin_review_salon('73000000-0000-0000-0000-000000000001','published','Checked fixture')->>'status'='published','administrator can approve submitted business');
+select test.ok(jsonb_array_length(public.admin_get_salon('73000000-0000-0000-0000-000000000001')->'reviews')=1,'approval records audit note');
+select test.ok(public.admin_review_salon('73000000-0000-0000-0000-000000000001','rejected','Please correct address')->>'status'='rejected','administrator can reject without deleting business');
+select test.ok(public.admin_review_salon('73000000-0000-0000-0000-000000000001','published','Corrected')->>'status'='published','administrator can approve reviewed correction');
+select test.ok(public.admin_overview(30)->'counts'->>'pending' is not null,'overview contains actual administration counts');
+select test.ok(jsonb_array_length(public.admin_overview(7)->'daily')=7,'statistics show requested daily range');
+select test.ok((public.admin_overview(0)->>'days')::integer=1,'statistics window has lower bound');
+select test.ok((public.admin_overview(99999)->>'days')::integer=366,'statistics window has upper bound');
+select test.fails('select public.admin_set_platform_billing(null,true)','23514','billing cannot enable without explicit monthly price');
+select test.fails('select public.admin_set_platform_billing(-1,true)','23514','monthly price cannot be negative');
+select test.ok((public.admin_set_platform_billing(2900,true)->>'monthly_price_cents')::integer=2900,'administrator sets monthly EUR plan');
+select test.ok((public.admin_set_platform_billing(2900,true)->>'stripe_enabled')::boolean=false,'setting price does not pretend Stripe secrets are installed');
+select test.ok(public.admin_set_business_subscription('73000000-0000-0000-0000-000000000001',null,'pending','manual')->>'status'='pending','administrator can prepare business subscription');
+select public.admin_create_business_charge('73000000-0000-0000-0000-000000000001',current_date,(current_date+interval '1 month')::date,null,current_date)->>'id' as charge_id \gset
+select test.ok((public.admin_create_business_charge('73000000-0000-0000-0000-000000000001',current_date,(current_date+interval '1 month')::date,null,current_date)->>'id')=:'charge_id','same monthly charge retry is idempotent');
+select test.fails($q$select public.admin_create_business_charge('73000000-0000-0000-0000-000000000001',current_date,(current_date+interval '1 month')::date,1900,current_date)$q$,'23514','same period cannot silently change its price');
+select test.ok((public.admin_overview(30)->'revenue'->>'outstanding_cents')::bigint>=2900,'unpaid platform charges appear in statistics');
+select test.ok(public.admin_set_charge_status(:'charge_id','paid','Bank receipt fixture')->>'status'='paid','administrator records actual manually received subscription payment');
+select test.ok(public.admin_set_charge_status(:'charge_id','paid','retry')->>'status'='paid','paid record retry is idempotent');
+select test.fails(format('select public.admin_set_charge_status(%L,''void'','''')',:'charge_id'),'23514','settled payment cannot be silently voided');
+select test.ok((public.admin_overview(30)->'revenue'->>'subscriptions_cents')::bigint>=2900,'subscription revenue uses settled charges');
+
+set local request.jwt.claims='{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated"}';
+select test.ok((select count(*) from public.business_charges)=1,'owner sees own monthly billing record');
+select test.ok(public.get_business_billing('73000000-0000-0000-0000-000000000001')->'subscription'->>'status'='active','settled manual payment activates subscription record');
+select test.ok(jsonb_array_length(public.get_business_billing('73000000-0000-0000-0000-000000000001')->'reviews')=3,'owner can read review notes without admin authority');
+select test.fails($q$insert into public.business_charges(salon_id,amount_cents,period_start,period_end) values('73000000-0000-0000-0000-000000000001',1,current_date,current_date+1)$q$,'42501','owner cannot create own billing charges');
+select test.fails($q$update public.business_charges set status='paid'$q$,'42501','owner cannot forge direct paid status');
+select test.fails(format('select public.admin_set_charge_status(%L,''paid'','''')',:'charge_id'),'42501','owner cannot execute administrative paid action');
+set local request.jwt.claims='{"sub":"00000000-0000-0000-0000-000000000006","role":"authenticated"}';
+select test.ok((select count(*) from public.business_charges)=0,'other owner cannot see billing records');
+select test.ok((select count(*) from public.business_subscriptions)=0,'other owner cannot see subscription');
+
+set local role service_role;
+set local request.jwt.claims='{"role":"service_role"}';
+select test.ok((public.billing_checkout_context('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001')->>'online_checkout_available')::boolean=false,'service context does not pretend disabled payment provider is ready');
+select test.fails($q$select public.billing_reserve_checkout('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001')$q$,'23514','new checkout blocked before provider activation');
+select public.billing_enable_stripe(true);
+select test.fails($q$select public.billing_reserve_checkout('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001')$q$,'23514','Stripe cannot double-bill an already-paid manual subscription period');
+reset role;
+set local request.jwt.claims='{}';
+update public.business_subscriptions set current_period_start=now()-interval '2 months',current_period_end=now()-interval '1 month' where salon_id='73000000-0000-0000-0000-000000000001';
+set local role service_role;
+set local request.jwt.claims='{"role":"service_role"}';
+select test.fails($q$select public.billing_checkout_context('00000000-0000-0000-0000-000000000004','73000000-0000-0000-0000-000000000001')$q$,'42501','checkout service requires verified account');
+select test.fails($q$select public.billing_checkout_context('00000000-0000-0000-0000-000000000006','73000000-0000-0000-0000-000000000001')$q$,'42501','checkout service cannot authorize wrong owner');
+select test.ok((public.billing_checkout_context('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001')->>'amount_cents')::integer=2900,'checkout service derives price from database');
+select test.fails($q$select public.billing_record_checkout('73000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001','cs_fixture','https://evil.example/checkout',null,null)$q$,'23514','checkout rejects untrusted payment hostname');
+select test.ok((public.billing_reserve_checkout('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001')->>'amount_cents')::integer=2900,'checkout reservation derives server monthly price');
+select test.ok((public.billing_reserve_checkout('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001')->>'reuse_checkout')::boolean=false,'same checkout request reservation safely retries');
+select test.fails($q$select public.billing_reserve_checkout('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000002')$q$,'55P03','two tabs cannot reserve simultaneous paid checkout sessions');
+select test.ok(public.billing_record_checkout('73000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001','cs_fixture','https://checkout.stripe.com/c/pay/cs_fixture','cus_fixture',null)->>'status'='pending','trusted checkout record remains pending without payment');
+select test.ok(public.billing_record_checkout('73000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000001','cs_fixture','https://checkout.stripe.com/c/pay/cs_fixture','cus_fixture',null)->>'status'='pending','trusted checkout retry is idempotent');
+select test.ok((public.billing_reserve_checkout('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001','74000000-0000-0000-0000-000000000002')->>'reuse_checkout')::boolean=true,'new tab reuses recorded pending checkout instead of charging twice');
+select test.fails($q$select public.apply_stripe_billing_event('evt_wrong_salon','checkout.session.completed','{"salon_id":"73000000-0000-0000-0000-000000000002","stripe_checkout_id":"cs_fixture","stripe_subscription_id":"sub_fixture","stripe_customer_id":"cus_fixture","payment_status":"paid"}')$q$,'23514','signed event mapping cannot target another salon');
+select test.ok(public.apply_stripe_billing_event('evt_unrelated','invoice.paid','{"stripe_subscription_id":"sub_unrelated"}')->>'ignored'='true','unrelated Stripe products do not create business subscriptions');
+select test.fails($q$select public.apply_stripe_billing_event('evt_unlinked','invoice.paid','{"salon_id":"73000000-0000-0000-0000-000000000001","stripe_subscription_id":"sub_fixture","stripe_customer_id":"cus_fixture","stripe_invoice_id":"in_fixture","currency":"EUR","amount_cents":2900}')$q$,'P0001','early invoice is retried until known checkout is linked');
+select test.ok(public.apply_stripe_billing_event('evt_checkout','checkout.session.completed','{"salon_id":"73000000-0000-0000-0000-000000000001","stripe_checkout_id":"cs_fixture","stripe_subscription_id":"sub_fixture","stripe_customer_id":"cus_fixture","payment_status":"unpaid"}')->>'status'='pending','unpaid checkout does not activate subscription');
+select test.ok(public.apply_stripe_billing_event('evt_checkout','checkout.session.completed','{"stripe_checkout_id":"cs_fixture","payment_status":"paid"}')->>'duplicate'='true','webhook event retry cannot mutate a processed event');
+select test.ok(public.apply_stripe_billing_event('evt_paid','invoice.paid',jsonb_build_object('salon_id','73000000-0000-0000-0000-000000000001','stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','stripe_invoice_id','in_fixture','currency','EUR','amount_cents',2900,'period_start',now(),'period_end',now()+interval '1 month','paid_at',now()))->>'status'='active','verified paid invoice activates mapped subscription');
+select test.ok(public.apply_stripe_billing_event('evt_paid','invoice.paid','{}')->>'duplicate'='true','paid webhook retry is idempotent');
+select test.ok(public.apply_stripe_billing_event('evt_paid_again','invoice.paid',jsonb_build_object('stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','stripe_invoice_id','in_fixture','currency','EUR','amount_cents',2900,'period_start',now(),'period_end',now()+interval '1 month','paid_at',now()))->>'status'='active','same invoice across event IDs remains one charge');
+select test.ok(public.apply_stripe_billing_event('evt_failed_late','invoice.payment_failed',jsonb_build_object('stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','stripe_invoice_id','in_fixture','currency','EUR','amount_cents',2900,'period_start',now(),'period_end',now()+interval '1 month'))->>'status'='active','late payment-failed event cannot undo paid invoice');
+select public.apply_stripe_billing_event('evt_period_midday','invoice.paid','{"stripe_subscription_id":"sub_fixture","stripe_customer_id":"cus_fixture","stripe_invoice_id":"in_period_midday","currency":"EUR","amount_cents":0,"period_start":"2027-01-01T10:00:00Z","period_end":"2027-02-01T10:00:00Z"}');
+select public.apply_stripe_billing_event('evt_period_midnight','invoice.paid','{"stripe_subscription_id":"sub_fixture","stripe_customer_id":"cus_fixture","stripe_invoice_id":"in_period_midnight","currency":"EUR","amount_cents":0,"period_start":"2026-12-31T22:00:00Z","period_end":"2027-01-31T22:00:00Z"}');
+select public.billing_enable_stripe(false);
+select test.ok((public.billing_checkout_context('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001')->>'stripe_customer_id')='cus_fixture','existing subscriber can obtain owner-authorized portal context when new billing is disabled');
+select test.ok((public.billing_checkout_context('00000000-0000-0000-0000-000000000001','73000000-0000-0000-0000-000000000001')->>'online_checkout_available')::boolean=false,'disabled provider still blocks new checkout');
+select public.billing_enable_stripe(true);
+select test.ok(public.apply_stripe_billing_event('evt_new_active','customer.subscription.updated',jsonb_build_object('stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','status','active','event_created_at',now()+interval '2 minutes'))->>'status'='active','new signed subscription event updates current state');
+select test.ok(public.apply_stripe_billing_event('evt_old_failure','customer.subscription.updated',jsonb_build_object('stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','status','past_due','event_created_at',now()+interval '1 minute'))->>'status'='active','older signed status cannot override newer state');
+set local role authenticated;
+set local request.jwt.claims='{"sub":"00000000-0000-0000-0000-000000000005","role":"authenticated"}';
+select test.fails($q$select public.admin_set_business_subscription('73000000-0000-0000-0000-000000000001',2900,'active','manual')$q$,'23514','administrator cannot manually overwrite live Stripe subscription');
+set local role service_role;
+set local request.jwt.claims='{"role":"service_role"}';
+select test.ok(public.apply_stripe_billing_event('evt_new_cancel','customer.subscription.deleted',jsonb_build_object('stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','status','cancelled','event_created_at',now()+interval '3 minutes'))->>'status'='cancelled','signed subscription cancellation is recorded');
+select test.ok(public.apply_stripe_billing_event('evt_late_equal_active','customer.subscription.updated',jsonb_build_object('stripe_subscription_id','sub_fixture','stripe_customer_id','cus_fixture','status','active','event_created_at',now()+interval '3 minutes'))->>'status'='cancelled','same-time reordered active event cannot resurrect cancelled subscription');
+select public.billing_reserve_checkout('00000000-0000-0000-0000-000000000006','73000000-0000-0000-0000-000000000002','74000000-0000-0000-0000-000000000020');
+select public.billing_record_checkout('73000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000006','74000000-0000-0000-0000-000000000020','cs_expired_fixture','https://checkout.stripe.com/c/pay/cs_expired_fixture','cus_second_fixture',null);
+select test.ok(public.apply_stripe_billing_event('evt_expired','checkout.session.expired','{"stripe_checkout_id":"cs_expired_fixture","stripe_customer_id":"cus_second_fixture","status":"cancelled"}')->>'status'='cancelled','expired pending checkout releases subscription without a charge');
+reset role;
+set local request.jwt.claims='{}';
+select test.ok((select count(*) from public.business_charges where stripe_invoice_id='in_fixture')=1,'provider invoice uniqueness prevents duplicate income');
+select test.ok((select status='paid' from public.business_charges where stripe_invoice_id='in_fixture'),'provider charge remains paid after late failure');
+select test.ok((select period_start=date '2027-01-01' and period_end=date '2027-02-02' from public.business_charges where stripe_invoice_id='in_period_midday'),'midday Stripe renewal includes the final partially covered local day in the exclusive date range');
+select test.ok((select period_start=date '2027-01-01' and period_end=date '2027-02-01' from public.business_charges where stripe_invoice_id='in_period_midnight'),'midnight Stripe renewal preserves the exclusive local ending day');
+select test.ok((select period_start=current_date and period_end=(current_date+interval '1 month')::date from public.business_charges where id=:'charge_id'),'Stripe date normalization does not alter manual date-only charge ranges');
+set local role authenticated;
+set local request.jwt.claims='{"sub":"00000000-0000-0000-0000-000000000005","role":"authenticated"}';
+select test.ok((public.admin_overview(30)->'revenue'->>'subscriptions_cents')::bigint>=5800,'platform statistics count each actual payment once');
+rollback;

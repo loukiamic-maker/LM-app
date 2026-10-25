@@ -81,7 +81,7 @@ test('service icon selection is preserved by city and date search', async ({ pag
   await chooseCity(page, 'Πάφος');
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   await expect(page.locator('.salon-card')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Δεν βρέθηκε ο ιδανικός συνδυασμός… ακόμα" })).toBeVisible();
 });
 
 test('city groups match city font size and keyboard selection can be cancelled or committed', async ({ page }) => {
@@ -148,7 +148,7 @@ test('booking reserves selected service and time locally, prevents overlap, and 
   await page.getByRole('button', { name: 'Ακύρωση ραντεβού', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Ναι, ακύρωση' }).click();
   await expect(page.locator('.appointment-card')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Το επόμενο ωραίο πράγμα στη μέρα σας.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Το επόμενο ωραίο πράγμα στη μέρα σας" })).toBeVisible();
 });
 
 test('checkout offers no real card or Apple Pay charge and keyboard can close modal', async ({ page }) => {
@@ -168,7 +168,7 @@ test('business calendar switches dates and creates and cancels demo appointments
   await expect(page.locator('.biz-appointment')).toHaveCount(3);
   await page.getByRole('button', { name: 'Επόμενη εβδομάδα', exact: true }).click();
   await expect(page.locator('.biz-appointment')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Μια ελεύθερη μέρα.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Μια ελεύθερη μέρα" })).toBeVisible();
   await page.getByRole('button', { name: 'Σήμερα', exact: true }).click();
   await page.getByRole('button', { name: 'Νέο ραντεβού', exact: true }).click();
   const dialog = page.getByRole('dialog');
@@ -222,7 +222,7 @@ test('mobile navigation and booking fit a narrow viewport', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Τα αγαπημένα σας', exact: true })).toBeVisible();
   await page.locator('.bottom-nav').getByRole('button', { name: 'Εξερεύνηση' }).click();
   const dialog = await chooseTime(page);
-  await expect(dialog.getByRole('heading', { name: 'Λίγο πριν την ομορφιά.' })).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: "Λίγο πριν την ομορφιά" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await dialog.getByRole('button', { name: 'Κλείσιμο κράτησης' }).click();
   await page.getByRole('button', { name: 'Μενού', exact: true }).click();

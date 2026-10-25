@@ -38,18 +38,18 @@ export const authRedirectUrl = () => new URL(import.meta.env.BASE_URL, window.lo
 export function platformError(error) {
   const code = error?.code || '';
   const message = error?.message || '';
-  let userMessage = 'Η ενέργεια δεν ολοκληρώθηκε. Προσπαθήστε ξανά.';
-  if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα.';
-  else if (/email.*confirm|confirm.*email|email_not_confirmed/i.test(message)) userMessage = 'Επιβεβαιώστε πρώτα το email σας από τον σύνδεσμο που λάβατε.';
-  else if (/Invalid login credentials/i.test(message)) userMessage = 'Το email ή ο κωδικός δεν είναι σωστός.';
-  else if (/already registered|already been registered/i.test(message)) userMessage = 'Αν υπάρχει ήδη λογαριασμός με αυτό το email, συνδεθείτε ή ζητήστε νέο κωδικό.';
-  else if (/BOOKING_LIMIT_REACHED/.test(message)) userMessage = 'Έχετε φτάσει το όριο ενεργών μελλοντικών κρατήσεων. Διαχειριστείτε πρώτα τα υπάρχοντα ραντεβού σας.';
-  else if (/rate.limit|too many|over_email_send_rate_limit/i.test(`${code} ${message}`)) userMessage = 'Έγιναν πολλές προσπάθειες. Περιμένετε λίγο πριν προσπαθήσετε ξανά.';
-  else if (/cutoff|cancellation.*period|too late|cancellation_window/i.test(message)) userMessage = 'Η προθεσμία ηλεκτρονικής αλλαγής έχει λήξει. Επικοινωνήστε με το κατάστημα.';
-  else if (/not authorized|not authenticated|permission|42501|PGRST301|JWT.*expired/i.test(`${code} ${message}`)) userMessage = 'Συνδεθείτε με τον λογαριασμό που έχει πρόσβαση σε αυτή την ενέργεια.';
-  else if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(message)) userMessage = 'Δεν υπάρχει σύνδεση με τον διακομιστή. Ελέγξτε τη σύνδεσή σας και προσπαθήστε ξανά.';
-  else if (/hours|schedule|time.off|invalid.*time|outside|notice/i.test(message)) userMessage = 'Η ώρα δεν βρίσκεται στο διαθέσιμο ωράριο του καταστήματος.';
-  else if (/published|inactive|not found/i.test(message)) userMessage = 'Αυτή η υπηρεσία ή το κατάστημα δεν είναι διαθέσιμο για κράτηση.';
+  let userMessage = 'Η ενέργεια δεν ολοκληρώθηκε Προσπαθήστε ξανά';
+  if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη Επιλέξτε μια νέα ώρα';
+  else if (/email.*confirm|confirm.*email|email_not_confirmed/i.test(message)) userMessage = 'Επιβεβαιώστε πρώτα το email σας από τον σύνδεσμο που λάβατε';
+  else if (/Invalid login credentials/i.test(message)) userMessage = 'Το email ή ο κωδικός δεν είναι σωστός';
+  else if (/already registered|already been registered/i.test(message)) userMessage = 'Αν υπάρχει ήδη λογαριασμός με αυτό το email, συνδεθείτε ή ζητήστε νέο κωδικό';
+  else if (/BOOKING_LIMIT_REACHED/.test(message)) userMessage = 'Έχετε φτάσει το όριο ενεργών μελλοντικών κρατήσεων Διαχειριστείτε πρώτα τα υπάρχοντα ραντεβού σας';
+  else if (/rate.limit|too many|over_email_send_rate_limit/i.test(`${code} ${message}`)) userMessage = 'Έγιναν πολλές προσπάθειες Περιμένετε λίγο πριν προσπαθήσετε ξανά';
+  else if (/cutoff|cancellation.*period|too late|cancellation_window/i.test(message)) userMessage = 'Η προθεσμία ηλεκτρονικής αλλαγής έχει λήξει Επικοινωνήστε με το κατάστημα';
+  else if (/not authorized|not authenticated|permission|42501|PGRST301|JWT.*expired/i.test(`${code} ${message}`)) userMessage = 'Συνδεθείτε με τον λογαριασμό που έχει πρόσβαση σε αυτή την ενέργεια';
+  else if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(message)) userMessage = 'Δεν υπάρχει σύνδεση με τον διακομιστή Ελέγξτε τη σύνδεσή σας και προσπαθήστε ξανά';
+  else if (/hours|schedule|time.off|invalid.*time|outside|notice/i.test(message)) userMessage = 'Η ώρα δεν βρίσκεται στο διαθέσιμο ωράριο του καταστήματος';
+  else if (/published|inactive|not found/i.test(message)) userMessage = 'Αυτή η υπηρεσία ή το κατάστημα δεν είναι διαθέσιμο για κράτηση';
   const result = new Error(message || userMessage);
   result.userMessage = userMessage;
   result.code = code;
@@ -57,7 +57,7 @@ export function platformError(error) {
 }
 
 function client() {
-  if (!supabase) throw Object.assign(new Error('Backend not configured'), { userMessage: 'Η υπηρεσία κρατήσεων δεν έχει συνδεθεί ακόμα.' });
+  if (!supabase) throw Object.assign(new Error('Backend not configured'), { userMessage: 'Η υπηρεσία κρατήσεων δεν έχει συνδεθεί ακόμα' });
   return supabase;
 }
 
@@ -126,7 +126,8 @@ export async function mapBooking(row, knownSalon) {
     service: { id: row.service_id, name: row.service_name, price: row.price_cents / 100, duration: Math.round((new Date(row.ends_at) - new Date(row.starts_at)) / 60000) },
     staffId: row.staff_id, staff: staff.name,
     startsAt: row.starts_at, endsAt: row.ends_at, date: dateIn(row.starts_at, zone), time: timeIn(row.starts_at, zone),
-    name: row.customer_name, email: row.customer_email, payment: 'venue', status: row.status,
+    name: row.customer_name, email: row.customer_email || '', payment: 'venue', status: row.status,
+    source: row.booking_source || 'online', phone: row.customer_phone || '', notes: row.notes || '', createdBy: row.created_by || null,
     paymentStatus: row.payment_status, createdAt: row.created_at, country: salon.country,
     cancellationHours: row.cancellation_hours ?? salon.cancellation_hours ?? 24,
   };

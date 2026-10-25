@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, LoaderCircle, Mail, MapPin, RefreshCw, Scissors, ShieldCheck, Store, UserRound, X } from 'lucide-react';
 import { getSlots } from './lib/platform';
 import { useAccount } from './Account';
+import PhoneField from './PhoneField';
+import { cleanPhone, isValidMobilePhone } from './lib/phone';
 import './booking.css';
 
 const euros = (value) => new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -41,6 +43,9 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
   const [refreshIndex, setRefreshIndex] = useState(0);
   const [name, setName] = useState(profile?.name || '');
   const [nameEdited, setNameEdited] = useState(false);
+  const [phone, setPhone] = useState(profile?.mobilePhone || '');
+  const [phoneEdited, setPhoneEdited] = useState(false);
+  const [notes, setNotes] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -51,6 +56,8 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
   const mounted = useRef(false);
   const submitting = useRef(false);
   const requestId = useRef(null);
+  const contactOwner = useRef(user?.id || null);
+  const contactRevision = useRef(0);
   closeRef.current = onClose;
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(rangeStart, index)).filter((day) => day >= today && day <= lastDate), [rangeStart, today, lastDate]);
@@ -96,8 +103,18 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
   }, []);
 
   useEffect(() => {
+    const owner = user?.id || null;
+    if (contactOwner.current === owner) return;
+    contactOwner.current = owner; contactRevision.current++;
+    setName(''); setPhone(''); setNotes(''); setNameEdited(false); setPhoneEdited(false);
+    setAcknowledged(false); setConfirmed(null); setError(''); setSaving(false); submitting.current = false;
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!nameEdited) setName(profile?.name || '');
   }, [profile?.name, nameEdited]);
+
+  useEffect(() => { if (!phoneEdited) setPhone(profile?.mobilePhone || ''); }, [profile?.mobilePhone, phoneEdited]);
 
   useEffect(() => {
     requestId.current = null;
@@ -162,10 +179,12 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
     if (submitting.current) return;
     if (!verified) { requestAccount(); return; }
     if (name.trim().length < 2) { setError('Συμπληρώστε το όνομά σας με τουλάχιστον δύο χαρακτήρες'); return; }
+    if (!isValidMobilePhone(phone)) { setError('Συμπληρώστε ένα έγκυρο κινητό τηλέφωνο'); return; }
     if (!acknowledged) { setError('Διαβάστε και αποδεχθείτε τις πληροφορίες κράτησης για να συνεχίσετε'); return; }
     if (!service?.id || !selectedStillAvailable) { setError('Επιλέξτε ξανά διαθέσιμη ημέρα και ώρα'); setStep(2); return; }
     if (!requestId.current) requestId.current = crypto.randomUUID();
-    const payload = { serviceId: service.id, staffId: slot.staffId, startsAt: slot.startsAt, customerName: name.trim(), requestId: requestId.current };
+    const payload = { serviceId: service.id, staffId: slot.staffId, startsAt: slot.startsAt, customerName: name.trim(), customerPhone: cleanPhone(phone), notes: notes.trim(), requestId: requestId.current };
+    const savingRevision = contactRevision.current;
     submitting.current = true;
     setSaving(true);
     setError('');
@@ -176,9 +195,9 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
         if (booking?.status === 'cancelled') { failure.code = '409'; failure.userMessage = 'Αυτό το αίτημα κράτησης έχει ακυρωθεί. Επιλέξτε ξανά ημέρα και ώρα για νέα κράτηση'; }
         throw failure;
       }
-      if (mounted.current) setConfirmed(booking);
+      if (mounted.current && savingRevision === contactRevision.current) setConfirmed(booking);
     } catch (failure) {
-      if (!mounted.current) return;
+      if (!mounted.current || savingRevision !== contactRevision.current) return;
       if (isConflict(failure)) {
         setSlot(null);
         setStep(2);
@@ -189,8 +208,10 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
         setError(userMessage(failure, 'Η κράτηση δεν ολοκληρώθηκε. Δοκιμάστε ξανά'));
       }
     } finally {
-      submitting.current = false;
-      if (mounted.current) setSaving(false);
+      if (savingRevision === contactRevision.current) {
+        submitting.current = false;
+        if (mounted.current) setSaving(false);
+      }
     }
   };
 
@@ -272,13 +293,15 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
           {accountLoading ? <p className="booking-live-loading"><LoaderCircle size={17} className="booking-live-spinner"/>Έλεγχος λογαριασμού…</p> : !verified ? <div className="booking-live-auth"><ShieldCheck size={23}/><div><strong>{user ? 'Επιβεβαιώστε το email σας' : 'Μια ασφαλής κράτηση ξεκινά από εσάς'}</strong><p>{user ? 'Χρειάζεται επιβεβαίωση του email του λογαριασμού σας πριν από την κράτηση' : 'Συνδεθείτε ή δημιουργήστε λογαριασμό για να διαχειρίζεστε και να ακυρώνετε τα ραντεβού σας'}</p><button type="button" onClick={requestAccount}>{user ? 'Διαχείριση λογαριασμού' : 'Σύνδεση ή εγγραφή'}<ArrowRight size={15}/></button></div></div> : <>
             <div className="booking-fields booking-live-fields"><label><span>Το όνομά σας</span><div><UserRound size={17}/><input value={name} disabled={saving} onChange={(event) => { setName(event.target.value); setNameEdited(true); }} required minLength={2} maxLength={80} autoComplete="name" placeholder="Ονοματεπώνυμο"/></div></label></div>
             <div className="booking-live-account-email"><Mail size={16}/><span>{user.email}</span><CheckCircle2 size={14}/><small>Επιβεβαιωμένο email</small></div>
+            <div className="booking-form-fields booking-contact-fields"><PhoneField value={phone} onChange={value => { setPhoneEdited(true); setPhone(value); }} disabled={saving} /><label>Σημειώσεις για την επιχείρηση (προαιρετικό)<textarea value={notes} disabled={saving} onChange={event => setNotes(event.target.value)} maxLength={1000} rows={3} /></label></div>
+            <p className="booking-live-payment-note">Το κινητό και οι σημειώσεις σας είναι διαθέσιμα στην επιχείρηση για την εξυπηρέτηση της κράτησής σας</p>
           </>}
           <h3>Πληρωμή</h3>
           <div className="booking-payment-methods"><div className="booking-payment-active"><Store size={19}/><span>Πληρωμή στο κατάστημα</span><span className="booking-radio"><span/></span></div></div>
           <p className="booking-live-payment-note">Δεν ζητάμε στοιχεία κάρτας. Η πληρωμή γίνεται απευθείας στο κατάστημα</p>
           <div className="booking-total"><div><span>Υπηρεσία</span><span>{euros(service.price)}</span></div><div><strong>Σύνολο</strong><strong>{euros(service.price)}</strong></div></div>
           <div className="booking-live-cancellation"><ShieldCheck size={18}/><div><strong>Πολιτική ακύρωσης</strong><p>{cancellationNote}</p></div></div>
-          <label className="booking-live-ack"><input type="checkbox" required checked={acknowledged} disabled={saving} onChange={(event) => setAcknowledged(event.target.checked)}/><span>Έχω διαβάσει την πολιτική ακύρωσης και κατανοώ ότι το όνομα και το email μου θα χρησιμοποιηθούν από το κατάστημα και την πλατφόρμα Eneres για τη διαχείριση της κράτησης</span></label>
+          <label className="booking-live-ack"><input type="checkbox" required checked={acknowledged} disabled={saving} onChange={(event) => setAcknowledged(event.target.checked)}/><span>Έχω διαβάσει την πολιτική ακύρωσης και κατανοώ ότι το όνομα, το email και το κινητό μου θα χρησιμοποιηθούν από το κατάστημα και την πλατφόρμα Eneres για τη διαχείριση της κράτησης</span></label>
           <p className="booking-live-privacy">Δεν σας εγγράφουμε σε διαφημιστικές επικοινωνίες</p>
           {error && <p className="booking-error" role="alert">{error}</p>}
           <button className="booking-primary" type="submit" disabled={saving || accountLoading || !verified || !acknowledged}>{saving ? <><LoaderCircle size={17} className="booking-live-spinner"/>Καταχώριση κράτησης…</> : <>Επιβεβαίωση ραντεβού · {euros(service.price)}<ArrowRight size={17}/></>}</button>

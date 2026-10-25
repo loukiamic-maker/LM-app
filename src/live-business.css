@@ -12,6 +12,12 @@
 
 /* Allow the navigation to scroll within its card instead of widening the page. */
 .lb-sidebar{min-width:0}
+.lb-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;min-width:0}
+.lb-help-link{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:8px 10px;border:1px solid #e4d7c5;border-radius:8px;color:#967353;text-decoration:none;font-size:11px;white-space:nowrap}
+.lb-help-link:hover{background:#f3e8da}
+.lb-booking-detail-person a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.lb-timeline-booking .lb-offline-label{margin:0}
+@media(max-width:700px){.lb-top-actions{gap:5px;flex-shrink:0}.lb-help-link{width:39px;min-height:39px;padding:8px}.lb-help-link>span{display:none}.lb-topbar>.brand{flex-shrink:0}.lb-detail-list>div{gap:12px}.lb-detail-list dd{min-width:0;max-width:65%}}
 .lb-photo-editor{display:flex;flex-direction:column;gap:10px;min-width:0;margin:5px 0;padding:18px;border:1px solid #e5d9c9;border-radius:11px;background:#faf6ef}
 .lb-photo-label{font-size:11px;color:#8c765e}
 .lb-photo-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px}

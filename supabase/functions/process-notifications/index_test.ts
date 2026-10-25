@@ -146,3 +146,15 @@ Deno.test('cancelled or rescheduled reminder is skipped before any provider send
     assert(body.skipped===1&&body.delivered===0&&sends===0,'Stale reminder must not send or claim delivery');
   } finally { globalThis.fetch=originalFetch; restore(); }
 });
+
+Deno.test('business notices include private contact and customer cancellation notices include the explanation', () => {
+  const detailed = { ...notification, payload: { ...notification.payload, customer_phone: '+35799000000', notes: '<private customer note>', cancellation_note: '<owner explanation>' } };
+  const owner = emailContent(detailed, true);
+  const customer = emailContent(detailed, false);
+  assert(owner.text.includes('+35799000000') && owner.text.includes('private customer note'), 'Business gets contact and appointment note');
+  assert(!customer.text.includes('+35799000000') && !customer.text.includes('private customer note'), 'Customer mail does not duplicate owner contact fields');
+  assert(!owner.html.includes('<private customer note>'), 'Contact notes are HTML escaped');
+  const cancellation = emailContent({ ...detailed, event_type: 'booking_cancelled' }, false);
+  assert(cancellation.text.includes('owner explanation'), 'Customer receives cancellation explanation');
+  assert(!cancellation.html.includes('<owner explanation>'), 'Cancellation explanation is HTML escaped');
+});

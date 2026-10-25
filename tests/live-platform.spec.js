@@ -42,7 +42,7 @@ function session() {
 }
 
 async function mockPlatform(page, options = {}) {
-  const state = { calls: [], unexpected: [], bookings: [], owners: [], failCreate: false, holdCreate: false, createPending: false, releaseCreate: null, ...options };
+  const state = { calls: [], unexpected: [], bookings: [], owners: [], alerts: [], profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '' }, failCreate: false, holdCreate: false, createPending: false, releaseCreate: null, ...options };
   await page.route('**/platform-config.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.MERAKI_CONFIG=${JSON.stringify({ supabaseUrl: HOST, supabasePublishableKey: 'sb_publishable_test_key' })};` }));
   await page.route(`${HOST}/**`, async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname;
@@ -54,7 +54,10 @@ async function mockPlatform(page, options = {}) {
     if (path === '/auth/v1/token') return send(session());
     if (path === '/auth/v1/user') return send(account);
     if (path === '/auth/v1/logout') return send({});
-    if (path === '/rest/v1/profiles') return send(request.method() === 'GET' ? [{ user_id: ids.user, full_name: 'Ελένη Δοκιμή' }] : null);
+    if (path === '/rest/v1/profiles') {
+      if (request.method() === 'GET') return send([state.profile]);
+      Object.assign(state.profile, body); return send(null);
+    }
     if (path === '/rest/v1/salons') {
       if (url.searchParams.has('owner_id')) return send(state.owners);
       if (url.searchParams.has('id')) {
@@ -67,6 +70,7 @@ async function mockPlatform(page, options = {}) {
     if (path === '/rest/v1/staff') return send(publicSalon.staff[0]);
     if (path === '/rest/v1/staff_hours' || path === '/rest/v1/staff_time_off') return send([]);
     if (path === '/rest/v1/bookings') return send(state.bookings);
+    if (path === '/rest/v1/rpc/list_business_booking_alerts') return send(state.alerts);
     if (path === '/rest/v1/rpc/get_availability') {
       if (state.failAvailability) return send({ message: 'Availability service temporarily unavailable' }, 503);
       return send((state.unavailableDates?.includes(body.p_date) ? [] : [10, 12]).map(hour => {
@@ -74,13 +78,13 @@ async function mockPlatform(page, options = {}) {
         return { staff_id: ids.staff, staff_name: publicSalon.staff[0].name, starts_at, ends_at: oneHourLater(starts_at), local_time: `${hour}:00` };
       }));
     }
-    if (path === '/rest/v1/rpc/create_booking') {
+    if (path === '/rest/v1/rpc/create_booking_with_contact') {
       if (state.failCreate) return send({ code: '23P01', message: 'slot_taken: booking overlap' }, 409);
       if (state.holdCreate) { state.createPending = true; await new Promise(resolve => { state.releaseCreate = resolve; }); }
       const booking = {
         id: ids.booking, salon_id: ids.salon, service_id: body.p_service_id, staff_id: body.p_staff_id,
         starts_at: body.p_starts_at, ends_at: oneHourLater(body.p_starts_at),
-        customer_id: ids.user, customer_name: body.p_customer_name, customer_email: account.email,
+        customer_id: ids.user, customer_name: body.p_customer_name, customer_email: account.email, customer_phone: body.p_customer_phone, notes: body.p_notes, booking_source: 'online',
         service_name: 'Κούρεμα από κατάλογο', price_cents: 3500, status: 'confirmed',
         payment_method: 'pay_at_salon', payment_status: 'unpaid', idempotency_key: body.p_idempotency_key, created_at: new Date().toISOString(),
       };
@@ -125,7 +129,7 @@ async function login(page, alreadyOpen = false) {
   await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού' }).click();
 }
 
-async function checkout(page) {
+async function checkout(page, { fillContact = true } = {}) {
   const dialog = page.locator('.booking-live');
   await dialog.getByRole('button', { name: /Κούρεμα από κατάλογο/ }).click();
   await dialog.getByRole('button', { name: 'Συνέχεια', exact: true }).click();
@@ -135,6 +139,7 @@ async function checkout(page) {
   await dialog.getByRole('button', { name: 'Συνέχεια στην επιβεβαίωση' }).click();
   await expect(dialog.getByText('Πληρωμή στο κατάστημα', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toBeDisabled();
+  if (fillContact) await dialog.getByLabel('Αριθμός κινητού', { exact: true }).fill('+306900000000');
   await dialog.getByRole('checkbox').check();
   return dialog;
 }
@@ -154,10 +159,12 @@ test('live catalog, signup and authenticated venue booking wait for server confi
   await expect(panel.locator('.eneres-brand img')).toHaveAttribute('src', /eneres-flower\.png$/);
   await panel.getByRole('button', { name: 'Δημιουργία λογαριασμού', exact: true }).click();
   await panel.getByLabel('Όνομα', { exact: true }).fill('Ελένη Δοκιμή');
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('99000000');
   await panel.getByLabel('Email', { exact: true }).fill(account.email);
   await panel.getByLabel(/^Κωδικός πρόσβασης/).fill('test-password-123');
   await panel.locator('form').getByRole('button', { name: 'Δημιουργία λογαριασμού', exact: true }).click();
   await expect(panel.getByRole('status')).toContainText('Ελέγξτε το email σας');
+  expect(state.calls.find(call => call.path.endsWith('/auth/v1/signup')).body.data).toMatchObject({ mobile_phone: '+35799000000' });
   await expect(page.locator('.booking-live')).toHaveCount(0);
   await panel.getByRole('button', { name: 'Έχω ήδη λογαριασμό' }).click();
   await login(page, true);
@@ -168,9 +175,10 @@ test('live catalog, signup and authenticated venue booking wait for server confi
   await expect(dialog.getByRole('button', { name: /Καταχώριση κράτησης/ })).toBeDisabled();
   state.releaseCreate();
   await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
-  const create = state.calls.find(call => call.path.endsWith('/create_booking'));
+  const create = state.calls.find(call => call.path.endsWith('/create_booking_with_contact'));
   expect(create.body).toMatchObject({ p_service_id: ids.service, p_staff_id: ids.staff, p_customer_name: 'Ελένη Δοκιμή' });
-  expect(Object.keys(create.body).sort()).toEqual(['p_customer_name', 'p_idempotency_key', 'p_service_id', 'p_staff_id', 'p_starts_at']);
+  expect(Object.keys(create.body).sort()).toEqual(['p_customer_name', 'p_customer_phone', 'p_idempotency_key', 'p_notes', 'p_service_id', 'p_staff_id', 'p_starts_at']);
+  expect(create.body).toMatchObject({ p_customer_phone: '+306900000000', p_notes: '' });
   expect(create.authorization).toMatch(/^Bearer /);
   await dialog.getByRole('button', { name: 'Ολοκλήρωση', exact: true }).click();
   await page.locator('.desktop-nav').getByRole('button', { name: /Τα ραντεβού μου/ }).click();
@@ -207,7 +215,7 @@ test('date search shows only venues with real server availability for the select
   await expect(page.locator('.salon-card')).toHaveCount(1);
   await expect(page.getByRole('alert')).toHaveCount(0);
   expect(state.calls.filter(call => call.path.endsWith('/get_availability')).every(call => call.body.p_service_id === ids.service)).toBe(true);
-  expect(state.calls.some(call => call.path.endsWith('/create_booking'))).toBe(false);
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
   expect(state.unexpected).toEqual([]);
 });
 
@@ -261,7 +269,7 @@ test('business creates a server-side draft and clears private forms when another
   await expect(page.locator('.lb-sidebar')).toContainText('Πρόχειρο');
   await expect(page.getByRole('button', { name: 'Υποβολή για έλεγχο' })).toBeDisabled();
   await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Ημερολόγιο', exact: true }).click();
-  await expect(page.getByText("Δεν υπάρχουν κρατήσεις για αυτή την ημερομηνία", { exact: true })).toBeVisible();
+  await expect(page.getByText("Δεν υπάρχουν ραντεβού για αυτή την ημέρα", { exact: true })).toBeVisible();
   await expect(page.locator('.biz-appointment,.lb-booking-row')).toHaveCount(0);
   await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Υπηρεσίες', exact: true }).click();
   await page.getByRole('button', { name: 'Νέα υπηρεσία', exact: true }).click();
@@ -326,7 +334,7 @@ test('owner records venue payment for a completed unpaid appointment and sees re
   await expect(detail).toContainText("Δεν γίνεται ηλεκτρονική χρέωση");
   await detail.getByRole('button', { name: 'Καταχώριση εξόφλησης στο κατάστημα', exact: true }).click();
   await expect(detail).toHaveCount(0);
-  await expect(row).toContainText('Εξοφλημένο στο κατάστημα');
+  await expect(row).toContainText('πληρωμένο');
   const payments = state.calls.filter(call => call.path.endsWith('/complete_booking'));
   expect(payments).toHaveLength(1);
   expect(payments[0].body).toEqual({ p_booking_id: ids.booking, p_paid: true });
@@ -353,6 +361,100 @@ test('an offline reservation removes a selected consumer slot when the checkout 
   await expect(dialog.getByRole('heading', { name: /^Βρείτε τη δική σας στιγμή\.?$/ })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Συνέχεια στην επιβεβαίωση', exact: true })).toBeDisabled();
   await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toHaveCount(0);
-  expect(state.calls.some(call => call.path.endsWith('/create_booking'))).toBe(false);
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
   expect(state.unexpected).toEqual([]);
+});
+
+test('consumer must provide a mobile number and customer notes reach the server booking', async ({ page }) => {
+  const state = await mockPlatform(page);
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page, { fillContact: false });
+  const confirm = dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ });
+  await expect(dialog.getByLabel('Αριθμός κινητού', { exact: true })).toHaveAttribute('required', '');
+  await confirm.click();
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
+  await dialog.getByLabel('Αριθμός κινητού', { exact: true }).fill('+30123');
+  await confirm.click();
+  await expect(dialog.getByRole('alert')).toContainText('έγκυρο κινητό');
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
+  await dialog.getByLabel('Αριθμός κινητού', { exact: true }).fill('+306900000000');
+  await dialog.getByLabel('Σημειώσεις για την επιχείρηση (προαιρετικό)', { exact: true }).fill('Παρακαλώ καλέστε με πριν το ραντεβού');
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
+  expect(state.calls.find(call => call.path.endsWith('/create_booking_with_contact')).body).toMatchObject({
+    p_customer_phone: '+306900000000', p_notes: 'Παρακαλώ καλέστε με πριν το ραντεβού',
+  });
+  expect(state.bookings[0]).toMatchObject({ customer_phone: '+306900000000', notes: 'Παρακαλώ καλέστε με πριν το ραντεβού', booking_source: 'online' });
+  expect(state.unexpected).toEqual([]);
+});
+
+test('signup requires a valid mobile number and sends the chosen country prefix to Auth', async ({ page }) => {
+  const state = await mockPlatform(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
+  const panel = page.locator('.account-panel');
+  await panel.getByRole('button', { name: 'Δημιουργία λογαριασμού', exact: true }).click();
+  await panel.getByLabel('Όνομα', { exact: true }).fill('Νέος Πελάτης');
+  await panel.getByLabel('Email', { exact: true }).fill('new-user@example.test');
+  await panel.getByLabel(/^Κωδικός πρόσβασης/).fill('isolated-password-123');
+  await expect(panel.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true })).toHaveValue('CY');
+  await expect(panel.getByLabel('Αριθμός κινητού', { exact: true })).toHaveAttribute('required', '');
+  const submit = panel.locator('form').getByRole('button', { name: 'Δημιουργία λογαριασμού', exact: true });
+  await submit.click();
+  expect(state.calls.some(call => call.path.endsWith('/auth/v1/signup'))).toBe(false);
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('123');
+  await submit.click();
+  await expect(panel.getByRole('alert')).toContainText('έγκυρο αριθμό κινητού');
+  expect(state.calls.some(call => call.path.endsWith('/auth/v1/signup'))).toBe(false);
+  await panel.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true }).selectOption('GR');
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('6900000000');
+  await submit.click();
+  await expect(panel.getByRole('status')).toContainText('Ελέγξτε το email σας');
+  expect(state.calls.find(call => call.path.endsWith('/auth/v1/signup')).body.data).toEqual({ full_name: 'Νέος Πελάτης', mobile_phone: '+306900000000' });
+  expect(state.unexpected).toEqual([]);
+});
+
+test('a saved mobile profile persists a changed country code and autofills the booking contact field', async ({ page }) => {
+  const state = await mockPlatform(page, { profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '+35799000000' } });
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
+  const panel = page.locator('.account-panel');
+  await expect(panel.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true })).toHaveValue('CY');
+  await expect(panel.getByLabel('Αριθμός κινητού', { exact: true })).toHaveValue('99000000');
+  await panel.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true }).selectOption('GR');
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('6900000000');
+  await panel.getByRole('button', { name: 'Αποθήκευση προφίλ', exact: true }).click();
+  await expect(panel.getByRole('status')).toContainText('Το προφίλ σας ενημερώθηκε');
+  expect(state.calls.find(call => call.path === '/rest/v1/profiles' && call.method === 'POST').body).toMatchObject({ mobile_phone: '+306900000000' });
+  await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού', exact: true }).click();
+  await page.reload();
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page, { fillContact: false });
+  await expect(dialog.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true })).toHaveValue('GR');
+  await expect(dialog.getByLabel('Αριθμός κινητού', { exact: true })).toHaveValue('6900000000');
+  await dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ }).click();
+  await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
+  expect(state.calls.find(call => call.path.endsWith('/create_booking_with_contact')).body).toMatchObject({ p_customer_phone: '+306900000000' });
+  expect(state.unexpected).toEqual([]);
+});
+
+test('private booking contact details close when another browser tab signs the account out', async ({ page }) => {
+  await mockPlatform(page);
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  await dialog.getByLabel('Σημειώσεις για την επιχείρηση (προαιρετικό)', { exact: true }).fill('Ιδιωτική σημείωση του πρώτου λογαριασμού');
+  const otherTab = await page.context().newPage();
+  try {
+    await mockPlatform(otherTab);
+    await otherTab.goto('/');
+    await otherTab.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
+    const panel = otherTab.locator('.account-panel');
+    await expect(panel.getByRole('heading', { name: 'Το προφίλ σας', exact: true })).toBeVisible();
+    await panel.getByRole('button', { name: 'Αποσύνδεση', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText('Ιδιωτική σημείωση του πρώτου λογαριασμού', { exact: true })).toHaveCount(0);
+  } finally { await otherTab.close(); }
 });

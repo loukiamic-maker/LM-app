@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, CalendarDays, CheckCircle2, CreditCard, Euro, FileCheck2, LoaderCircle, RefreshCw, ShieldCheck, Store, Users, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarDays, CheckCircle2, Copy, CreditCard, Euro, FileCheck2, LoaderCircle, RefreshCw, ShieldCheck, Store, Users, Video, X } from 'lucide-react';
 import Brand from './Brand';
 import { AccountPanel, useAccount } from './Account';
 import { createBusinessCharge, getAdminOverview, getAdminSalon, getAdminSalons, getPlatformBilling, managementError, refreshAdminAccess, reviewSalon, setBusinessSubscription, setChargeStatus, setPlatformBilling } from './lib/admin';
 import './admin.css';
+import { tutorialGuides, tutorialShareUrl } from './lib/tutorials';
 
 const currency = cents => cents == null ? 'Δεν έχει οριστεί' : new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(Number(cents) / 100);
 const number = value => value == null ? '—' : new Intl.NumberFormat('el-GR').format(Number(value));
@@ -113,6 +114,7 @@ export default function Admin({ onBack }) {
   const loadSequence = useRef(0), detailSequence = useRef(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [tab, setTab] = useState('overview');
+  const [copiedGuide, setCopiedGuide] = useState('');
   const [days, setDays] = useState(30);
   const [overview, setOverview] = useState(null), [salons, setSalons] = useState([]), [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false), [busy, setBusy] = useState(false);
@@ -160,6 +162,12 @@ export default function Admin({ onBack }) {
     finally { if (identity.current === owner) setBusy(false); }
   }
 
+  async function copyGuide(audience) {
+    setError(''); setCopiedGuide('');
+    try { await navigator.clipboard.writeText(tutorialShareUrl(audience)); setCopiedGuide(audience); }
+    catch { setError('Η αντιγραφή δεν ήταν δυνατή. Επιλέξτε τον σύνδεσμο παρακάτω και αντιγράψτε τον'); }
+  }
+
   const stats = overview?.stats || {};
   const filteredSalons = salons.filter(salon => !statusFilter || salon.status === statusFilter);
   const daily = overview?.daily || [];
@@ -168,8 +176,9 @@ export default function Admin({ onBack }) {
     <header className="en-admin-header"><button className="en-admin-back" onClick={onBack}><ArrowLeft size={17} />Ιστότοπος</button><Brand onClick={onBack} /><span><ShieldCheck size={16} />Διαχείριση</span></header>
     {!allowed ? <main className="en-admin-access en-admin-card"><ShieldCheck size={32} /><h1>Διαχείριση Eneres</h1>{account.loading ? <Busy /> : !account.user ? <><p>Συνδεθείτε με τον λογαριασμό διαχειριστή για να δείτε αιτήματα και συνδρομές</p><button className="en-admin-primary" onClick={() => setAuthOpen(true)}>Σύνδεση διαχειριστή</button></> : !account.user.email_confirmed_at ? <><p>Επιβεβαιώστε το email σας πριν ανοίξετε τη διαχείριση</p><button className="en-admin-primary" onClick={() => setAuthOpen(true)}>Ο λογαριασμός μου</button></> : <><p>Αυτός ο λογαριασμός δεν έχει πρόσβαση διαχείρισης</p><p className="en-admin-muted">Η πρόσβαση πρέπει πρώτα να ενεργοποιηθεί για τον λογαριασμό σας</p><Notice error>{error}</Notice><div className="en-admin-actions"><button className="en-admin-primary" disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await refreshAdminAccess(); } catch (failure) { setError(managementError(failure).userMessage); } finally { setBusy(false); } }}>Ανανέωση πρόσβασης</button><button className="en-admin-secondary" onClick={() => setAuthOpen(true)}>Ο λογαριασμός μου</button></div></>}</main> : <main className="en-admin-layout">
       <div className="en-admin-page-title"><div><span className="en-admin-eyebrow">ENERES BUSINESS</span><h1>Διαχείριση Eneres</h1><p>{account.user.email}</p></div><button className="en-admin-secondary" disabled={loading || busy} onClick={() => { refresh(); if (selectedId) refreshDetail(); }}><RefreshCw size={15} />Ανανέωση</button></div>
-      <nav className="en-admin-tabs" aria-label="Ενότητες διαχείρισης">{[{ id: 'overview', label: 'Επισκόπηση', Icon: BarChart3 }, { id: 'requests', label: 'Αιτήματα επιχειρήσεων', Icon: FileCheck2 }, { id: 'billing', label: 'Μηνιαίες συνδρομές', Icon: CreditCard }].map(({ id, label, Icon }) => <button className={tab === id ? 'is-active' : ''} key={id} onClick={() => { setTab(id); setError(''); setNotice(''); }}><Icon size={17} />{label}{id === 'requests' && <span>{salons.filter(salon => salon.status === 'pending').length}</span>}</button>)}</nav>
+      <nav className="en-admin-tabs" aria-label="Ενότητες διαχείρισης">{[{ id: 'overview', label: 'Επισκόπηση', Icon: BarChart3 }, { id: 'requests', label: 'Αιτήματα επιχειρήσεων', Icon: FileCheck2 }, { id: 'billing', label: 'Μηνιαίες συνδρομές', Icon: CreditCard }, { id: 'videos', label: 'Βίντεο οδηγιών', Icon: Video }].map(({ id, label, Icon }) => <button className={tab === id ? 'is-active' : ''} key={id} onClick={() => { setTab(id); setError(''); setNotice(''); }}><Icon size={17} />{label}{id === 'requests' && <span>{salons.filter(salon => salon.status === 'pending').length}</span>}</button>)}</nav>
       <Notice error>{error}</Notice><Notice>{notice}</Notice>
+      {tab === 'videos' && <section className="en-admin-guide-grid">{Object.values(tutorialGuides).map(guide => <article key={guide.id} className="en-admin-card"><h2>{guide.title}</h2><p className="en-admin-muted">{guide.description}</p><label className="en-admin-field">Σύνδεσμος βίντεο<input readOnly value={tutorialShareUrl(guide.id)} onFocus={event => event.target.select()} aria-label={guide.id === 'client' ? 'Σύνδεσμος οδηγού πελατών' : 'Σύνδεσμος οδηγού επιχειρήσεων'} /></label><div className="en-admin-actions"><button className="en-admin-primary" onClick={() => copyGuide(guide.id)}><Copy size={15} />{guide.id === 'client' ? 'Αντιγραφή συνδέσμου πελατών' : 'Αντιγραφή συνδέσμου επιχειρήσεων'}</button><a className="en-admin-secondary" href={tutorialShareUrl(guide.id)} target="_blank" rel="noreferrer"><Video size={15} />Προβολή βίντεο</a></div>{copiedGuide === guide.id && <p className="en-admin-muted" role="status">Ο σύνδεσμος αντιγράφηκε</p>}</article>)}</section>}
       {loading && !overview ? <Busy /> : <>
         {tab === 'overview' && <><div className="en-admin-section-heading"><h2>Η εικόνα της πλατφόρμας</h2><Field label="Περίοδος στατιστικών"><select value={days} onChange={event => setDays(Number(event.target.value))}><option value={7}>Τελευταίες 7 ημέρες</option><option value={30}>Τελευταίες 30 ημέρες</option><option value={90}>Τελευταίες 90 ημέρες</option></select></Field></div><div className="en-admin-stats">{[
           ['Επιχειρήσεις', number(stats.salons), Store], ['Αιτήματα σε έλεγχο', number(stats.pending_salons), FileCheck2], ['Δημοσιευμένοι χώροι', number(stats.published_salons), CheckCircle2], ['Ιδιοκτήτες', number(stats.owners), Users],

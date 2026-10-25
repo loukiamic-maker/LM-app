@@ -1,0 +1,28 @@
+.eneres-site-footer{width:calc(100% - 48px);max-width:1160px;margin:24px auto 0;padding:0 0 22px;color:#93877b}
+.eneres-footer-brand-row{display:flex;justify-content:flex-start;align-items:center;padding:0 0 12px}
+.eneres-site-footer .brand.eneres-brand{width:60px;gap:0;margin:0;font-size:17px;line-height:1.15;letter-spacing:1.3px}
+.eneres-site-footer .brand.eneres-brand>img{width:58px;height:40px;object-fit:contain}
+.eneres-site-footer .brand.eneres-brand>span{margin-top:1px}
+.eneres-footer-links{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;border-top:1px solid #e6ded3;padding:10px 0 8px;flex-wrap:wrap}
+.eneres-footer-nav{display:flex;align-items:center;flex-wrap:wrap;gap:2px 22px;min-width:0}
+.eneres-footer-nav>button,.eneres-footer-legal>button{padding:6px 0;min-height:32px;font-size:11px;line-height:1.6;text-align:left;color:inherit}
+.eneres-footer-nav>button:hover,.eneres-footer-legal>button:hover{color:var(--accent)}
+.eneres-footer-location{display:inline-flex;align-items:center;gap:5px;font-size:10px;line-height:1.6}
+.eneres-footer-location>svg,.eneres-footer-language>svg{flex-shrink:0}
+.eneres-footer-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;font-size:10px;line-height:1.7;padding:0}
+.eneres-footer-legal{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.eneres-footer-legal>button{font-size:10px}
+.eneres-footer-language{display:inline-flex;align-items:center;gap:4px;margin-left:5px}
+@media(max-width:700px){
+  .eneres-site-footer{width:calc(100% - 40px);margin-top:18px;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+  .eneres-site-footer--mobile-nav{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+  .eneres-footer-brand-row{padding-bottom:10px}
+  .eneres-footer-links{align-items:flex-start;flex-direction:column;gap:5px;padding:8px 0 7px}
+  .eneres-footer-nav{gap:1px 18px}
+  .eneres-footer-nav>button{font-size:10px}
+  .eneres-footer-location{font-size:9px}
+  .eneres-footer-bottom{align-items:flex-start;flex-direction:column;gap:1px;font-size:9px}
+  .eneres-footer-legal{gap:5px 11px;width:100%}
+  .eneres-footer-legal>button{font-size:9px}
+  .eneres-footer-language{margin-left:auto;font-size:9px}
+}

@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Eye, EyeOff, LoaderCircle, LogOut, Mail, ShieldCheck, UserRound, X } from 'lucide-react';
 import { authRedirectUrl, platformError, platformReady, supabase, updateProfile as saveProfile } from './lib/platform';
 import Brand from './Brand';
+import PhoneField from './PhoneField';
+import { cleanPhone, isValidMobilePhone } from './lib/phone';
 import './account.css';
 
 const AccountContext = createContext({ user: null, profile: null, loading: false });
@@ -12,6 +14,7 @@ export function AccountProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(platformReady);
   const [recovery, setRecovery] = useState(false);
+  const profileOwner = useRef(null);
   useEffect(() => {
     if (!supabase) return undefined;
     let alive = true;
@@ -20,11 +23,18 @@ export function AccountProvider({ children }) {
       const current = ++revision;
       if (!alive) return;
       const account = session?.user || null;
+      if (profileOwner.current !== (account?.id || null)) {
+        profileOwner.current = account?.id || null; setProfile(null); setLoading(Boolean(account));
+      }
       setUser(account);
       if (!account) { setProfile(null); setLoading(false); return; }
-      const { data } = await supabase.from('profiles').select('full_name').eq('user_id', account.id).maybeSingle();
-      if (alive && current === revision) {
-        setProfile({ name: data?.full_name || account.user_metadata?.full_name || '', email: account.email || '' });
+      let { data, error } = await supabase.from('profiles').select('full_name,mobile_phone').eq('user_id', account.id).maybeSingle();
+      if (error && (error.code === '42703' || /mobile_phone.*does not exist/i.test(error.message || ''))) {
+        const fallback = await supabase.from('profiles').select('full_name').eq('user_id', account.id).maybeSingle();
+        data = fallback.data;
+      }
+      if (alive && current === revision && profileOwner.current === account.id) {
+        setProfile({ name: data?.full_name || account.user_metadata?.full_name || '', email: account.email || '', mobilePhone: data?.mobile_phone || account.user_metadata?.mobile_phone || '' });
         setLoading(false);
       }
     };
@@ -36,8 +46,8 @@ export function AccountProvider({ children }) {
     });
     return () => { alive = false; subscription.unsubscribe(); };
   }, []);
-  const updateProfile = async data => { await saveProfile(data); setProfile(previous => ({ ...previous, name: data.name.trim() })); };
-  const signOut = async () => { const { error } = await supabase.auth.signOut(); if (error) throw platformError(error); setUser(null); setProfile(null); };
+  const updateProfile = async data => { const owner = profileOwner.current; await saveProfile(data); if (owner === profileOwner.current) setProfile(previous => ({ ...previous, name: data.name.trim(), ...(data.mobilePhone !== undefined ? { mobilePhone: data.mobilePhone } : {}) })); };
+  const signOut = async () => { const { error } = await supabase.auth.signOut(); if (error) throw platformError(error); profileOwner.current = null; setUser(null); setProfile(null); };
   return <AccountContext.Provider value={{ user, profile, loading, recovery, setRecovery, signOut, updateProfile }}>{children}</AccountContext.Provider>;
 }
 
@@ -48,6 +58,8 @@ export function AccountPanel({ onClose }) {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [mobilePhone, setMobilePhone] = useState(profile?.mobilePhone || '');
+  const phoneEdited = useRef(false);
   const panel = useRef(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -59,7 +71,7 @@ export function AccountPanel({ onClose }) {
     const keyboard = event => {
       if (event.key === 'Escape') close.current();
       if (event.key !== 'Tab') return;
-      const elements = [...panel.current.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href]')].filter(el => el.getClientRects().length);
+      const elements = [...panel.current.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')].filter(el => el.getClientRects().length);
       if (!elements.length) return;
       if (event.shiftKey && document.activeElement === elements[0]) { event.preventDefault(); elements.at(-1).focus(); }
       if (!event.shiftKey && document.activeElement === elements.at(-1)) { event.preventDefault(); elements[0].focus(); }
@@ -68,6 +80,8 @@ export function AccountPanel({ onClose }) {
     return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', keyboard); if (previous?.isConnected) previous.focus(); };
   }, []);
   useEffect(() => { if (recovery) setMode('password'); }, [recovery]);
+  useEffect(() => { if (!phoneEdited.current) setMobilePhone(profile?.mobilePhone || ''); }, [profile?.mobilePhone]);
+  useEffect(() => { phoneEdited.current = false; setMobilePhone(profile?.mobilePhone || ''); }, [user?.id]);
   async function perform(work) {
     setBusy(true); setError(''); setNotice('');
     try { await work(); } catch (failure) { setError(failure.userMessage || platformError(failure).userMessage); }
@@ -80,19 +94,20 @@ export function AccountPanel({ onClose }) {
     const password = String(values.get('password') || '');
     const name = String(values.get('name') || '').trim();
     if ((mode === 'signup' || (user && mode !== 'password')) && name.length < 2) { setError('Συμπληρώστε το όνομά σας με τουλάχιστον δύο χαρακτήρες'); return; }
+    if ((mode === 'signup' || (user && mode !== 'password')) && !isValidMobilePhone(mobilePhone)) { setError('Επιλέξτε τον σωστό κωδικό χώρας και συμπληρώστε έγκυρο αριθμό κινητού'); return; }
     await perform(async () => {
       if (mode === 'password') {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
         setRecovery(false); setMode('login'); setNotice('Ο κωδικός σας ενημερώθηκε');
       } else if (user) {
-        await updateProfile({ name }); setNotice('Το προφίλ σας ενημερώθηκε');
+        await updateProfile({ name, mobilePhone: cleanPhone(mobilePhone) }); setNotice('Το προφίλ σας ενημερώθηκε');
       } else if (mode === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() });
         if (error) throw error;
         setNotice('Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε οδηγίες επαναφοράς');
       } else if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl(), data: { full_name: name } } });
+        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl(), data: { full_name: name, mobile_phone: cleanPhone(mobilePhone) } } });
         if (error) throw error;
         setNotice('Ελέγξτε το email σας για να επιβεβαιώσετε τον λογαριασμό. Μετά την επιβεβαίωση, συνδεθείτε εδώ');
       } else {
@@ -113,6 +128,7 @@ export function AccountPanel({ onClose }) {
     <form className="account-form" onSubmit={submit}>
       {(mode === 'signup' || (user && !passwordMode)) && <label>Όνομα<input name="name" defaultValue={profile?.name || ''} required minLength={2} maxLength={80} autoComplete="given-name" /></label>}
       {!user && <label>Email<input name="email" type="email" required maxLength={160} autoComplete="email" /></label>}
+      {(mode === 'signup' || (user && !passwordMode)) && <PhoneField value={mobilePhone} onChange={value => { phoneEdited.current = true; setMobilePhone(value); }} disabled={busy} />}
       {(passwordMode || (!user && mode !== 'reset')) && <label>Κωδικός πρόσβασης<div className="account-password"><input name="password" type={showPassword ? 'text' : 'password'} required minLength={mode === 'login' ? 1 : 10} maxLength={72} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Απόκρυψη κωδικού' : 'Εμφάνιση κωδικού'}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>{mode !== 'login' && <small>Τουλάχιστον 10 χαρακτήρες</small>}</label>}
       {error && <p className="account-error" role="alert">{error}</p>}
       {notice && <p className="account-notice" role="status"><CheckCircle2 size={16} />{notice}</p>}

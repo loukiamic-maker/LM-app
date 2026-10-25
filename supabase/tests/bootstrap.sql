@@ -9,7 +9,10 @@ create table auth.users (
   id uuid primary key,
   email text,
   email_confirmed_at timestamptz,
-  raw_app_meta_data jsonb not null default '{}'
+  raw_app_meta_data jsonb not null default '{}',
+  -- Fixture-only default keeps old booking fixtures focused on their own tests.
+  -- Signup tests explicitly provide empty/invalid metadata to exercise rejection.
+  raw_user_meta_data jsonb default '{"mobile_phone":"+300000000000"}'
 );
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub','')::uuid

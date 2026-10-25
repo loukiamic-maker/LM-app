@@ -6,9 +6,9 @@ export const categories = [
   { id: 'face', label: 'Περιποίηση προσώπου', shortLabel: 'Πρόσωπο', icon: 'flower', photoIndex: 2 },
   { id: 'massage', label: 'Μασάζ & spa', shortLabel: 'Μασάζ', icon: 'leaf', photoIndex: 3 },
   { id: 'makeup', label: 'Μακιγιάζ', shortLabel: 'Μακιγιάζ', icon: 'sparkles', photoIndex: 4 },
-  { id: 'laser', label: 'Αποτρίχωση laser', shortLabel: 'Laser', icon: 'sun', photoIndex: 6 },
+  { id: 'laser', label: 'Αποτρίχωση με λέιζερ', shortLabel: 'Λέιζερ', icon: 'sun', photoIndex: 6 },
   { id: 'brows', label: 'Φρύδια & βλεφαρίδες', shortLabel: 'Φρύδια', icon: 'eye', photoIndex: 7 },
-  { id: 'barber', label: 'Barber shops', shortLabel: 'Barber', icon: 'scissors', photoIndex: 5 },
+  { id: 'barber', label: 'Κουρεία', shortLabel: 'Κουρείο', icon: 'scissors', photoIndex: 5 },
 ];
 
 export const locationGroups = [
@@ -113,11 +113,11 @@ export const salons = [
     location: 'Άγιος Νικόλαος, Λεμεσός', city: 'Λεμεσός', country: 'Κύπρος',
     rating: 4.8, reviewCount: 69, image: '/images/beauty-grid.png', photoIndex: 11,
     tag: 'Απαλή επιδερμίδα, προσωπική φροντίδα',
-    description: 'Ένας σύγχρονος χώρος αφιερωμένος στην περιποίηση της επιδερμίδας. Ανακαλύψτε επιλογές αποτρίχωσης laser με εξατομικευμένη αξιολόγηση πριν από την πρώτη σας συνεδρία',
+    description: 'Ένας σύγχρονος χώρος αφιερωμένος στην περιποίηση της επιδερμίδας. Ανακαλύψτε επιλογές αποτρίχωσης με λέιζερ και εξατομικευμένη αξιολόγηση πριν από την πρώτη σας συνεδρία',
     services: [
-      { name: 'Laser μασχάλες', duration: 20, price: 25 },
-      { name: 'Laser μπικίνι', duration: 30, price: 40 },
-      { name: 'Laser ολόκληρα πόδια', duration: 50, price: 70 },
+      { name: 'Λέιζερ μασχάλες', duration: 20, price: 25 },
+      { name: 'Λέιζερ μπικίνι', duration: 30, price: 40 },
+      { name: 'Λέιζερ ολόκληρα πόδια', duration: 50, price: 70 },
     ],
     availability: ['09:30', '11:00', '13:30', '16:30'], isDemo: true,
   },

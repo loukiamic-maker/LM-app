@@ -2,10 +2,11 @@
 
 For a **new project**, apply the migrations in order: `202610240001_booking_platform.sql`,
 `202610240002_owner_calendar.sql`, `202610240003_admin_billing.sql`, then
-`202610250004_salon_photos.sql`, using
+`202610250004_salon_photos.sql`, then `202610250005_booking_alerts.sql`, using
 `supabase db push` after linking the project or the privileged SQL Editor.
-For an **existing project with the original booking tables**, apply **002 then 003 then 004**.
+For an **existing project with the original booking tables**, apply missing upgrades in order: **002, 003, 004, 005**.
 If the administration/calendar upgrade is already installed, apply **004 only** for photo uploads.
+If photo uploads are already installed, apply **005 only** for signup mobiles and booking alerts.
 Never rerun 001, delete tables, or reset the project to install these additions.
 The additive upgrades can be reapplied. Production migrations do not create
 sample businesses or accounts.
@@ -210,3 +211,13 @@ bash scripts/test-admin-upgrade.sh /tmp/eneres-upgrade/eneres-admin-calendar-upg
 
 This uses another disposable local PostgreSQL container and never contacts the
 hosted project or sends an email.
+
+## Signup mobiles and business booking alerts
+
+Apply `migrations/202610250005_booking_alerts.sql` after the earlier upgrades. The SQL Editor package can be generated with `node scripts/package-booking-alerts-upgrade.mjs /workspace/artifacts`; the exact package is tested with `bash scripts/test-booking-alerts-upgrade.sh`. It is additive and safe to rerun.
+
+New email accounts supply a canonical country-coded mobile in Auth metadata `mobile_phone`. Server triggers validate it and create the private profile contact; older profiles keep their existing numbers or remain null. Country-code controls and booking forms validate the input, while the server remains authoritative. These numbers are not claimed to be SMS verified. Legacy accounts can add a number in their profile or booking form.
+
+`create_booking_with_contact` creates an online booking with required phone and optional notes in the same transaction as its business alert and private email queue entry. The older booking RPC remains compatible with cached clients. The owner-only inbox supports paginated history and a global unread count. Acknowledgement records that the business has seen the already-confirmed booking; it does not create or approve a second reservation. Cancellation requires a reason and atomically updates the booking, frees online availability, stores history and makes the reason visible to that customer.
+
+Dashboard notifications poll every15 seconds while visible and refresh on focus. They are not browser push notifications. Background email requires the existing private worker and sender configuration; publishing the frontend or applying SQL alone does not send email. Redeploy the updated `process-notifications` worker to include customer contact and cancellation explanations in emails. No real emails or live accounts are created by the tests.

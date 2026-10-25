@@ -39,7 +39,9 @@ export function platformError(error) {
   const code = error?.code || '';
   const message = error?.message || '';
   let userMessage = 'Η ενέργεια δεν ολοκληρώθηκε. Προσπαθήστε ξανά';
-  if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα';
+  if (/PHONE_REQUIRED|PHONE_INVALID|CUSTOMER_PHONE/.test(message)) userMessage = 'Συμπληρώστε ένα έγκυρο κινητό τηλέφωνο';
+  else if (/create_booking_with_contact/.test(message) && code === 'PGRST202') userMessage = 'Το σύστημα κρατήσεων χρειάζεται ενημέρωση από τη διαχείριση. Δοκιμάστε αργότερα';
+  else if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα';
   else if (/email.*confirm|confirm.*email|email_not_confirmed/i.test(message)) userMessage = 'Επιβεβαιώστε πρώτα το email σας από τον σύνδεσμο που λάβατε';
   else if (/Invalid login credentials/i.test(message)) userMessage = 'Το email ή ο κωδικός δεν είναι σωστός';
   else if (/already registered|already been registered/i.test(message)) userMessage = 'Αν υπάρχει ήδη λογαριασμός με αυτό το email, συνδεθείτε ή ζητήστε νέο κωδικό';
@@ -127,14 +129,14 @@ export async function mapBooking(row, knownSalon) {
     staffId: row.staff_id, staff: staff.name,
     startsAt: row.starts_at, endsAt: row.ends_at, date: dateIn(row.starts_at, zone), time: timeIn(row.starts_at, zone),
     name: row.customer_name, email: row.customer_email || '', payment: 'venue', status: row.status,
-    source: row.booking_source || 'online', phone: row.customer_phone || '', notes: row.notes || '', createdBy: row.created_by || null,
+    source: row.booking_source || 'online', phone: row.customer_phone || '', notes: row.notes || '', cancellationNote: row.cancellation_note || '', createdBy: row.created_by || null,
     paymentStatus: row.payment_status, createdAt: row.created_at, country: salon.country,
     cancellationHours: row.cancellation_hours ?? salon.cancellation_hours ?? 24,
   };
 }
 
-export async function createBooking({ serviceId, staffId, startsAt, customerName, requestId }) {
-  const row = one(await result(client().rpc('create_booking', { p_service_id: serviceId, p_staff_id: staffId, p_starts_at: startsAt, p_customer_name: customerName, p_idempotency_key: requestId })));
+export async function createBooking({ serviceId, staffId, startsAt, customerName, requestId, customerPhone, notes = '' }) {
+  const row = one(await result(client().rpc('create_booking_with_contact', { p_service_id: serviceId, p_staff_id: staffId, p_starts_at: startsAt, p_customer_name: customerName, p_idempotency_key: requestId, p_customer_phone: customerPhone?.trim() || '', p_notes: notes.trim() })));
   return mapBooking(row);
 }
 
@@ -154,10 +156,12 @@ export async function rescheduleBooking({ bookingId, staffId, startsAt }) {
   return mapBooking(one(await result(client().rpc('reschedule_booking', { p_booking_id: bookingId, p_staff_id: staffId, p_starts_at: startsAt }))));
 }
 
-export async function updateProfile({ name }) {
+export async function updateProfile({ name, mobilePhone }) {
   const { data: { user } } = await client().auth.getUser();
   if (!user) throw platformError({ code: '42501' });
-  await result(client().from('profiles').upsert({ user_id: user.id, full_name: name.trim() }));
+  const values = { user_id: user.id, full_name: name.trim() };
+  if (mobilePhone !== undefined) values.mobile_phone = mobilePhone.trim() || null;
+  await result(client().from('profiles').upsert(values));
 }
 
 export async function createSalon({ name, city, country, category, address }) {
@@ -193,11 +197,24 @@ export async function saveTimeOff(staffId, entry) {
 export async function deleteTimeOff(id) { await result(client().from('staff_time_off').delete().eq('id', id)); }
 
 export async function listBusinessBookings(salonId, date) {
-  // Filter the local day after the RLS-protected query: UTC offsets change with DST.
   const salon = await result(client().from('salons').select('id,name,country,timezone,cancellation_hours').eq('id', salonId).single());
-  const rows = await result(client().from('bookings').select('*').eq('salon_id', salonId).gte('starts_at', `${date}T00:00:00+14:00`).lt('starts_at', `${date}T23:59:59-12:00`).order('starts_at'));
+  const timezone = salon.timezone || zoneFor(salon.country);
+  const midnight = value => {
+    const target = Date.parse(`${value}T00:00:00Z`);
+    let instant = target;
+    const format = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const parts = Object.fromEntries(format.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+      instant += target - Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+    }
+    return new Date(instant).toISOString();
+  };
+  const next = new Date(`${date}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
+  const start = midnight(date), end = midnight(next.toISOString().slice(0, 10));
+  // Include appointments that began the previous day and continue after midnight.
+  const rows = await result(client().from('bookings').select('*').eq('salon_id', salonId).gt('ends_at', start).lt('starts_at', end).order('starts_at'));
   const bookings = await Promise.all((rows || []).map(row => mapBooking(row, salon)));
-  return bookings.filter(b => b.date === date);
+  return bookings.filter(booking => Date.parse(booking.endsAt) > Date.parse(start) && Date.parse(booking.startsAt) < Date.parse(end));
 }
 
 export async function completeBooking(id, paid) { return mapBooking(one(await result(client().rpc('complete_booking', { p_booking_id: id, p_paid: paid })))); }

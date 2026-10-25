@@ -275,14 +275,14 @@ test('mobile results show editable search controls after searching without float
 test('results stack service over city and brand accents preserve internal sentence punctuation', async ({ page }) => {
   const accent = await page.locator('.hero h1 em').evaluate(element => getComputedStyle(element).color);
   const story = page.locator('.business-banner-copy h2 em');
-  await expect(story).toHaveText('επόμενη όμορφη ιστορία');
+  await expect(story).toHaveText('η επόμενη όμορφη ιστορία');
   await expect(story).toHaveCSS('color', accent);
   await expect(story).toHaveCSS('font-style', 'italic');
-  await page.getByRole('button', { name: 'Barber', exact: true }).click();
+  await page.getByRole('button', { name: 'Κουρείο', exact: true }).click();
   await chooseCity(page, 'Παραλίμνι');
   await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
   const heading = page.locator('.recommendations-title h2');
-  await expect(heading.locator('.results-service')).toHaveText('Barber shops');
+  await expect(heading.locator('.results-service')).toHaveText('Κουρεία');
   await expect(heading.locator('.results-city')).toHaveText('Παραλίμνι');
   await expect(heading).not.toContainText('·');
   for (const width of [320, 390, 1440]) {
@@ -296,7 +296,7 @@ test('results stack service over city and brand accents preserve internal senten
     expect(Math.abs(placement.serviceX - placement.cityX)).toBeLessThanOrEqual(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  await page.locator('.footer-nav').getByRole('button', { name: 'Το Eneres', exact: true }).click();
+  await page.locator('.eneres-footer-nav').getByRole('button', { name: 'Το Eneres', exact: true }).click();
   const about = page.getByRole('dialog');
   await expect(about.getByRole('heading', { name: 'Eneres: η φροντίδα σας, πιο κοντά', exact: true })).toBeVisible();
   await expect(about.locator('.about-brand-name')).toHaveText('Eneres:');
@@ -306,4 +306,43 @@ test('results stack service over city and brand accents preserve internal senten
   expect(paragraphs[0]).toContain('Κύπρο. Ανακαλύψτε');
   expect(paragraphs[1]).toContain('έκδοση. Οι χώροι');
   expect(paragraphs.every(text => !text.trim().endsWith('.'))).toBe(true);
+});
+
+test('Greek service labels, compact footer order and the client tutorial remain accessible across views', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await expect(page.getByRole('button', { name: 'Λέιζερ', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Κουρείο', exact: true })).toBeVisible();
+  await expect(page.locator('.business-link .lucide-arrow-up-right')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Μενού', exact: true }).click();
+  const menu = page.locator('.mobile-menu-panel');
+  await expect(menu.getByRole('button', { name: 'Για επαγγελματίες', exact: true }).locator('.lucide-arrow-up-right')).toHaveCount(0);
+  await menu.getByRole('button', { name: 'Βίντεο οδηγιών για πελάτες', exact: true }).click();
+  await expect(page).toHaveURL(/#guide-client$/);
+  await expect(page.getByRole('heading', { name: 'Οδηγός για πελάτες', exact: true })).toBeVisible();
+  const video = page.locator('video');
+  await expect(video).toHaveAttribute('controls', '');
+  await expect(video).not.toHaveAttribute('autoplay', /.*/);
+  await expect(video.locator('source')).toHaveAttribute('src', /eneres-client-guide-el\.mp4$/);
+  await expect(video.locator('track')).toHaveAttribute('srclang', 'el');
+  await page.getByText('Διαβάστε τις οδηγίες', { exact: true }).click();
+  await expect(page.locator('.evg-transcript')).toContainText('Η πληρωμή γίνεται στο κατάστημα');
+  for (const path of ['/', '/#favorites', '/#bookings', '/#business']) {
+    await page.goto(path);
+    const footer = page.locator('.eneres-site-footer');
+    await expect(footer).toHaveCount(1);
+    const positions = await footer.evaluate(element => {
+      const logo = element.querySelector('.eneres-footer-brand-row .brand').getBoundingClientRect();
+      const links = element.querySelector('.eneres-footer-links').getBoundingClientRect();
+      const copyright = element.querySelector('.eneres-footer-bottom').getBoundingClientRect();
+      const footer = element.getBoundingClientRect();
+      return { logoLeft: logo.left, footerLeft: footer.left, logoBottom: logo.bottom, linksTop: links.top, linksBottom: links.bottom, copyrightTop: copyright.top, divider: parseFloat(getComputedStyle(element.querySelector('.eneres-footer-links')).borderTopWidth), overflow: document.documentElement.scrollWidth > innerWidth };
+    });
+    expect(positions.logoLeft).toBeCloseTo(positions.footerLeft, 0);
+    expect(positions.logoBottom).toBeLessThanOrEqual(positions.linksTop + 1);
+    expect(positions.linksBottom).toBeLessThanOrEqual(positions.copyrightTop + 1);
+    expect(positions.divider).toBeGreaterThan(0);
+    expect(positions.overflow).toBe(false);
+    await expect(footer.getByRole('navigation', { name: 'Πληροφορίες Eneres', exact: true })).toContainText('Διαχείριση');
+    await expect(footer).toContainText('Φτιαγμένο για Ελλάδα & Κύπρο');
+  }
 });

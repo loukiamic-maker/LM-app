@@ -92,3 +92,13 @@ cannot undo payment. Existing payment-portal management can stay available when
 new subscription sales are disabled. Automatic card collection needs the operator's
 Stripe account, private secrets, deployed functions and tested webhooks; source
 code alone is not an activated payment service. See the function READMEs.
+
+## Signup contact, calendar and booking inbox
+
+Migration005 adds `profiles.mobile_phone` (nullable for legacy accounts), `bookings.cancellation_note`, internal contact idempotency state and owner-only `business_booking_alerts`. New email signups supply canonical `raw_user_meta_data.mobile_phone`; server Auth triggers enforce it on account insertion or first-email transition, create the private profile and preserve existing users. These numbers are supplied contact details, not SMS-verified identities.
+
+The consumer calls `create_booking_with_contact(p_service_id,p_staff_id,p_starts_at,p_customer_name,p_idempotency_key,p_customer_phone,p_notes)`; booking, contact snapshot, owner alert and private email-queue payload commit together. `list_business_booking_alerts(p_salon_id,p_limit,p_offset)` returns paginated alert JSON plus global unread count. Owner-only `acknowledge_business_booking(p_alert_id)` records awareness; `cancel_business_booking(p_alert_id,p_reason)` cancels and records the explanation. `cancel_booking_with_note(p_booking_id,p_reason)` supports the calendar. Browsers cannot write the alert table directly.
+
+Business day queries select appointments overlapping the exact salon-local day, including overnight appointments and DST boundaries. The UI shows empty hours, staff lanes and manual-booking slots. Inbox refreshes run every15 seconds while visible and on focus; email delivery remains a separately configured server worker.
+
+Public tutorial routes are `#guide-client` and `#guide-business`, with H.264 MP4, Greek caption tracks and transcripts. Admins can copy both links; video fixtures remain separate from hosted customer data.

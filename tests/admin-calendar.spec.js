@@ -11,6 +11,7 @@ const ids = {
   staff: '10000000-0000-4000-8000-000000000004',
   booking: '10000000-0000-4000-8000-000000000005',
   charge: '10000000-0000-4000-8000-000000000006',
+  alert: '10000000-0000-4000-8000-000000000007',
 };
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Athens' }).format(new Date());
 const salon = {
@@ -39,7 +40,7 @@ function session(user) {
 async function mockOperations(page, options = {}) {
   const state = {
     calls: [], unexpected: [], user: actor(options.admin), ownedSalons: options.noSalon ? [] : [structuredClone(salon)],
-    bookings: [], failManual: false, pending: [{ ...structuredClone(salon), status: 'pending', owner_email: 'owner@example.test' }],
+    bookings: [], alerts: [], failManual: false, pending: [{ ...structuredClone(salon), status: 'pending', owner_email: 'owner@example.test' }],
     charges: [], subscriptions: [], billing: { monthly_price_cents: null, enabled: false, currency: 'EUR', stripe_enabled: false },
     providerStatus: { configured: false, manage_configured: false }, uploads: [], removals: [], failUpload: false, failSalonSave: false, ...options,
   };
@@ -96,6 +97,19 @@ async function mockOperations(page, options = {}) {
         created_at: new Date().toISOString(),
       };
       state.bookings = [record]; return send(record);
+    }
+    if (path === '/rest/v1/rpc/list_business_booking_alerts') return send(state.alerts.slice(body.p_offset || 0, (body.p_offset || 0) + (body.p_limit || 100)));
+    if (path === '/rest/v1/rpc/acknowledge_business_booking') {
+      const alert = state.alerts.find(entry => entry.id === body.p_alert_id);
+      Object.assign(alert, { status: 'noted', noted_at: new Date().toISOString() });
+      return send(alert);
+    }
+    if (path === '/rest/v1/rpc/cancel_business_booking' || path === '/rest/v1/rpc/cancel_booking_with_note') {
+      const alert = state.alerts.find(entry => entry.id === body.p_alert_id || entry.booking_id === body.p_booking_id);
+      if (alert) Object.assign(alert, { status: 'cancelled', booking_status: 'cancelled', cancelled_at: new Date().toISOString(), cancellation_note: body.p_reason, booking: { ...alert.booking, status: 'cancelled', cancellation_note: body.p_reason } });
+      const booking = state.bookings.find(entry => entry.id === (body.p_booking_id || alert?.booking_id));
+      if (booking) Object.assign(booking, { status: 'cancelled', cancellation_note: body.p_reason });
+      return send(path.endsWith('/cancel_business_booking') ? alert : booking);
     }
     if (path === '/rest/v1/rpc/get_availability') return send([]);
     if (path === '/rest/v1/rpc/get_business_billing') return send({ plan: state.billing, online_checkout_available: false, subscription: state.subscriptions.find(entry => entry.salon_id === body.p_salon_id) || null, charges: state.charges.filter(entry => entry.salon_id === body.p_salon_id), reviews: [] });
@@ -231,6 +245,50 @@ test('manual offline appointment waits for the server, preserves conflicts and e
   expect(state.unexpected).toEqual([]);
 });
 
+
+function onlineBookingAndAlert() {
+  const day = today();
+  const offset = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Athens', hour: 'numeric', hourCycle: 'h23' }).format(new Date(`${day}T12:00:00Z`))) - 12;
+  const starts = new Date(`${day}T${String(10 - offset).padStart(2, '0')}:00:00Z`).toISOString();
+  const booking = {
+    id: ids.booking, salon_id: ids.salon, service_id: ids.service, staff_id: ids.staff, customer_id: '20000000-0000-4000-8000-000000000001',
+    customer_name: 'Πελάτης Νέας Κράτησης', customer_email: 'customer@example.test', customer_phone: '+306900000000', notes: 'Παρακαλώ καλέστε με στο κινητό',
+    booking_source: 'online', service_name: 'Κούρεμα', salon_name: salon.name, staff_name: 'Ελένη Επαγγελματίας', country: 'Ελλάδα', timezone: 'Europe/Athens',
+    starts_at: starts, ends_at: new Date(Date.parse(starts) + 3600000).toISOString(), cancellation_hours: 24, price_cents: 3500,
+    status: 'confirmed', payment_method: 'pay_at_salon', payment_status: 'unpaid', created_at: new Date().toISOString(),
+  };
+  return { booking, alert: {
+    id: ids.alert, booking_id: booking.id, salon_id: ids.salon, status: 'new', created_at: booking.created_at,
+    noted_at: null, cancelled_at: null, cancellation_note: '', customer_name: booking.customer_name, customer_email: booking.customer_email,
+    customer_phone: booking.customer_phone, notes: booking.notes, service_name: booking.service_name, staff_name: booking.staff_name,
+    starts_at: booking.starts_at, ends_at: booking.ends_at, price_cents: booking.price_cents, timezone: booking.timezone, booking_status: booking.status, booking,
+  } };
+}
+
+test('empty business day displays every hour and clicking a free slot prefills a manual appointment', async ({ page }) => {
+  const state = await mockOperations(page);
+  await openBusiness(page);
+  const calendar = page.getByRole('region', { name: 'Ημερήσιο ημερολόγιο', exact: true });
+  await expect(calendar).toBeVisible();
+  await expect(calendar.locator('.lb-timeline-hour').first()).toHaveText('09:00');
+  const hours = await calendar.locator('.lb-timeline-hour').allTextContents();
+  expect(hours).toContain('09:00');
+  expect(hours).toContain('18:00');
+  expect(hours.length).toBeGreaterThanOrEqual(10);
+  await expect(calendar.locator('.lb-booking-row')).toHaveCount(0);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await calendar.getByRole('button', { name: 'Νέο ραντεβού στις 10:30 με Ελένη Επαγγελματίας', exact: true }).click();
+  const manual = page.getByRole('dialog', { name: 'Νέο χειροκίνητο ραντεβού', exact: true });
+  await expect(manual.getByLabel('Ώρα', { exact: true })).toHaveValue('10:30');
+  await expect(manual.getByLabel('Ημερομηνία', { exact: true })).toHaveValue(today());
+  await expect(manual.getByRole('combobox', { name: 'Επαγγελματίας', exact: true })).toHaveValue(ids.staff);
+  expect(state.calls.some(call => call.path.endsWith('/create_manual_booking'))).toBe(false);
+  await manual.getByRole('button', { name: 'Κλείσιμο', exact: true }).click();
+  expect(state.unexpected).toEqual([]);
+});
 
 test('matching admin email and editable metadata do not grant administrative access', async ({ page }) => {
   const state = await mockOperations(page);
@@ -438,5 +496,92 @@ test('business photos reject unsafe file types, oversized images and invalid ima
     expect(state.uploads).toEqual([]);
     expect(state.calls.filter(call => call.path === '/rest/v1/salons' && call.method === 'PATCH')).toEqual([]);
   }
+  expect(state.unexpected).toEqual([]);
+});
+
+test('business booking alerts retain contact details, acknowledgement and cancellation history after reload', async ({ page }) => {
+  const { booking, alert } = onlineBookingAndAlert();
+  const state = await mockOperations(page, { bookings: [booking], alerts: [alert] });
+  await openBusiness(page);
+  const calendar = page.getByRole('region', { name: 'Ημερήσιο ημερολόγιο', exact: true });
+  await expect(calendar.getByRole('button', { name: 'Νέο ραντεβού στις 10:00 με Ελένη Επαγγελματίας', exact: true })).toBeDisabled();
+  await expect(calendar.getByRole('button', { name: 'Νέο ραντεβού στις 11:00 με Ελένη Επαγγελματίας', exact: true })).toBeEnabled();
+  await expect(page.locator('.bn-incoming')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ειδοποιήσεις κρατήσεων', exact: true }).locator('.bn-badge')).toHaveText('1');
+  await page.getByRole('button', { name: 'Ειδοποιήσεις κρατήσεων', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ιστορικό κρατήσεων Eneres', exact: true })).toBeVisible();
+  const row = page.locator('.bn-history-table tbody tr');
+  await expect(row).toContainText('Νέα κράτηση από το Eneres');
+  await expect(row).toContainText('Νέα κράτηση');
+  await page.getByRole('button', { name: `Λεπτομέρειες κράτησης ${booking.customer_name}`, exact: true }).click();
+  const detail = page.getByRole('dialog', { name: booking.customer_name, exact: true });
+  await expect(detail.getByRole('link', { name: '+306900000000', exact: true })).toHaveAttribute('href', 'tel:+306900000000');
+  await expect(detail).toContainText(booking.notes);
+  await detail.getByRole('button', { name: 'Η κράτηση σημειώθηκε', exact: true }).click();
+  await expect(detail.locator('.bn-status')).toHaveText('Η κράτηση σημειώθηκε');
+  await expect(detail.getByRole('button', { name: 'Η κράτηση σημειώθηκε', exact: true })).toHaveCount(0);
+  expect(state.calls.find(call => call.path.endsWith('/acknowledge_business_booking')).body).toEqual({ p_alert_id: ids.alert });
+  await detail.getByRole('button', { name: 'Ακύρωση κράτησης', exact: true }).click();
+  await detail.getByRole('button', { name: 'Επιβεβαίωση ακύρωσης', exact: true }).click();
+  expect(state.calls.some(call => call.path.endsWith('/cancel_business_booking'))).toBe(false);
+  await detail.getByLabel('Λόγος ακύρωσης', { exact: true }).fill('Ο επαγγελματίας δεν θα είναι διαθέσιμος');
+  await detail.getByRole('button', { name: 'Επιβεβαίωση ακύρωσης', exact: true }).click();
+  await expect(detail.locator('.bn-status')).toHaveText('Ακυρώθηκε');
+  await expect(detail).toContainText('Ο επαγγελματίας δεν θα είναι διαθέσιμος');
+  expect(state.calls.find(call => call.path.endsWith('/cancel_business_booking')).body).toEqual({ p_alert_id: ids.alert, p_reason: 'Ο επαγγελματίας δεν θα είναι διαθέσιμος' });
+  await detail.getByRole('button', { name: 'Κλείσιμο λεπτομερειών κράτησης', exact: true }).click();
+  await expect(row).toContainText('Ακυρώθηκε');
+  await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Ημερολόγιο', exact: true }).click();
+  await expect(calendar.locator('.lb-booking-row')).toHaveCount(0);
+  await expect(calendar.getByRole('button', { name: 'Νέο ραντεβού στις 10:00 με Ελένη Επαγγελματίας', exact: true })).toBeEnabled();
+  await page.reload();
+  await page.getByRole('button', { name: 'Ειδοποιήσεις κρατήσεων', exact: true }).click();
+  await expect(page.locator('.bn-history-table tbody tr')).toContainText('Ακυρώθηκε');
+  await page.getByRole('button', { name: `Λεπτομέρειες κράτησης ${booking.customer_name}`, exact: true }).click();
+  await expect(page.getByRole('dialog', { name: booking.customer_name, exact: true })).toContainText('Ο επαγγελματίας δεν θα είναι διαθέσιμος');
+  expect(state.unexpected).toEqual([]);
+});
+
+test('a new online booking triggers an in-app notice and refreshes the business calendar', async ({ page }) => {
+  const state = await mockOperations(page);
+  await openBusiness(page);
+  await page.getByRole('button', { name: 'Ειδοποιήσεις κρατήσεων', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Εδώ θα βρίσκετε τις νέες κρατήσεις', exact: true })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Ημερολόγιο', exact: true }).click();
+  await expect(page.locator('.bn-incoming')).toHaveCount(0);
+  const { booking, alert } = onlineBookingAndAlert();
+  state.bookings = [booking]; state.alerts = [alert];
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  const incoming = page.locator('.bn-incoming');
+  await expect(incoming).toContainText('Νέα κράτηση από το Eneres');
+  await expect(incoming).toContainText(booking.customer_name);
+  await expect(page.locator('.lb-booking-row')).toContainText(booking.customer_name);
+  await incoming.getByRole('button', { name: 'Δείτε την κράτηση', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ιστορικό κρατήσεων Eneres', exact: true })).toBeVisible();
+  await expect(incoming).toHaveCount(0);
+  expect(state.calls.some(call => call.path.includes('/functions/'))).toBe(false);
+  expect(state.unexpected).toEqual([]);
+});
+
+test('administrator can copy both public Greek tutorial links and business calendar links to its guide', async ({ page }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  const state = await mockOperations(page, { admin: true });
+  await login(page);
+  await page.goto('/#admin');
+  await page.getByRole('navigation', { name: 'Ενότητες διαχείρισης', exact: true }).getByRole('button', { name: 'Βίντεο οδηγιών', exact: true }).click();
+  await page.getByRole('button', { name: 'Αντιγραφή συνδέσμου πελατών', exact: true }).click();
+  const clientUrl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clientUrl).toBe('http://127.0.0.1:5173/#guide-client');
+  await page.getByRole('button', { name: 'Αντιγραφή συνδέσμου επιχειρήσεων', exact: true }).click();
+  const businessUrl = await page.evaluate(() => navigator.clipboard.readText());
+  expect(businessUrl).toBe('http://127.0.0.1:5173/#guide-business');
+  await page.goto(businessUrl);
+  await expect(page.getByRole('heading', { name: 'Οδηγός για επιχειρήσεις', exact: true })).toBeVisible();
+  await expect(page.locator('video source')).toHaveAttribute('src', /eneres-business-guide-el\.mp4$/);
+  await expect(page.locator('video track')).toHaveAttribute('srclang', 'el');
+  await expect(page.locator('video')).toHaveAttribute('controls', '');
+  await page.goto('/#business');
+  await expect(page.locator('a[href="#guide-business"]')).toBeVisible();
+  expect(state.calls.some(call => /\/rpc\/(admin_set|admin_create|admin_review)/.test(call.path))).toBe(false);
   expect(state.unexpected).toEqual([]);
 });

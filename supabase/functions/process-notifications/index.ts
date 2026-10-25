@@ -7,7 +7,7 @@ type Notification = {
     booking_id: string; customer_name: string; salon_name: string; salon_address: string;
     salon_city: string; timezone: string; owner_email?: string; service_name: string;
     staff_name: string; starts_at: string; ends_at: string; price_cents: number;
-    cancellation_hours: number;
+    cancellation_hours: number; customer_phone?: string; notes?: string; cancellation_note?: string;
   };
 };
 
@@ -38,6 +38,9 @@ export function emailContent(notification: Notification, forOwner: boolean) {
     `Πότε: ${when}`, `Διεύθυνση: ${p.salon_address}, ${p.salon_city}`, `Τιμή: ${price}`,
     'Πληρωμή στο κατάστημα. Δεν έχει γίνει ηλεκτρονική χρέωση.',
     `Ακύρωση ή αλλαγή από τον λογαριασμό σας έως ${p.cancellation_hours} ώρες πριν από το ραντεβού.`,
+    ...(forOwner && p.customer_phone ? [`Κινητό πελάτη: ${p.customer_phone}`] : []),
+    ...(forOwner && p.notes ? [`Σημείωση πελάτη: ${p.notes}`] : []),
+    ...(notification.event_type === 'booking_cancelled' && p.cancellation_note ? [`Σημείωση ακύρωσης: ${p.cancellation_note}`] : []),
     `Κωδικός ραντεβού: ${p.booking_id}`,
   ];
   return {

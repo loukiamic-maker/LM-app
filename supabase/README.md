@@ -1,11 +1,13 @@
 # Hosted booking backend
 
 For a **new project**, apply the migrations in order: `202610240001_booking_platform.sql`,
-`202610240002_owner_calendar.sql`, then `202610240003_admin_billing.sql`, using
+`202610240002_owner_calendar.sql`, `202610240003_admin_billing.sql`, then
+`202610250004_salon_photos.sql`, using
 `supabase db push` after linking the project or the privileged SQL Editor.
-For an **existing project with the original booking tables**, apply **002 then 003 only**.
+For an **existing project with the original booking tables**, apply **002 then 003 then 004**.
+If the administration/calendar upgrade is already installed, apply **004 only** for photo uploads.
 Never rerun 001, delete tables, or reset the project to install these additions.
-The two additive upgrades can be reapplied. Production migrations do not create
+The additive upgrades can be reapplied. Production migrations do not create
 sample businesses or accounts.
 `tests/bootstrap.sql` is **only** for the isolated local PostgreSQL test container.
 
@@ -32,8 +34,48 @@ SQL Editor access, service credentials or passwords with business owners.
 
 The admin review checks the actual owner, contact details, services, staff and
 hours. A business must have a usable service/staff/hours setup before approval.
-No fictional listing is published by installation. Actual salon photography can
-be set to an authorized public HTTPS image in `public.salons.image_url` during review.
+No fictional listing is published by installation. Owners choose an actual salon
+photograph from their device, see its preview, then save it through the business settings.
+
+## Salon photo uploads
+
+Apply [`migrations/202610250004_salon_photos.sql`](migrations/202610250004_salon_photos.sql)
+once in the existing project's privileged SQL Editor. It is safe to rerun and does
+not delete salons, bookings, existing images or unrelated Storage buckets/policies.
+Do not rerun the initial booking installer. Supabase must already supply its managed
+`storage.buckets` and `storage.objects` tables; the migration does not recreate them.
+
+The `salon-photos` bucket is public and accepts JPEG, PNG or WebP images up to
+5 MiB. Images are intentionally viewable by their public URL, including a draft
+business's uploaded image; do not upload private customer or identity photographs.
+Storage's API enforces the bucket MIME/size settings. The browser validates image
+decoding and shows the local preview before upload, but preview alone is not a save.
+
+Object names use `<salon UUID>/<random UUID>.<jpg|jpeg|png|webp>`. Insert, update,
+delete and metadata listing require the actual verified salon owner. Paths cannot
+be moved to another salon, and administrator status alone does not grant upload
+access to an unrelated business. Public delivery of an image uses the public
+Storage URL, while anonymous users cannot list the bucket's object metadata.
+Bucket-scoped restrictive guards also prevent a pre-existing broad Storage policy
+from bypassing these checks without changing permissions for unrelated buckets.
+
+The app uploads a new object, then saves its HTTPS public URL in `salons.image_url`.
+Owners do not need to enter or host an image URL themselves. A failed upload does
+not change the existing salon photograph. Card billing and appointment email
+settings are unrelated to this Storage upgrade.
+
+Generate a complete copy/paste script, including read-only installation checks:
+
+```sh
+node scripts/package-photo-upgrade.mjs /workspace/artifacts
+```
+
+`bash scripts/test-photo-storage.sh` validates the exact packaged script in an
+isolated local Postgres container, including ownership policies, unsupported paths
+and repeated installation preserving existing objects/settings. The local Storage
+tables are test-only approximations; a hosted upload/download acceptance check is
+still required after applying the upgrade. Never apply `tests/bootstrap.sql` to a
+hosted project.
 
 ## Shared owner calendar
 

@@ -38,16 +38,16 @@ export const authRedirectUrl = () => new URL(import.meta.env.BASE_URL, window.lo
 export function platformError(error) {
   const code = error?.code || '';
   const message = error?.message || '';
-  let userMessage = 'Η ενέργεια δεν ολοκληρώθηκε Προσπαθήστε ξανά';
-  if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη Επιλέξτε μια νέα ώρα';
+  let userMessage = 'Η ενέργεια δεν ολοκληρώθηκε. Προσπαθήστε ξανά';
+  if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα';
   else if (/email.*confirm|confirm.*email|email_not_confirmed/i.test(message)) userMessage = 'Επιβεβαιώστε πρώτα το email σας από τον σύνδεσμο που λάβατε';
   else if (/Invalid login credentials/i.test(message)) userMessage = 'Το email ή ο κωδικός δεν είναι σωστός';
   else if (/already registered|already been registered/i.test(message)) userMessage = 'Αν υπάρχει ήδη λογαριασμός με αυτό το email, συνδεθείτε ή ζητήστε νέο κωδικό';
-  else if (/BOOKING_LIMIT_REACHED/.test(message)) userMessage = 'Έχετε φτάσει το όριο ενεργών μελλοντικών κρατήσεων Διαχειριστείτε πρώτα τα υπάρχοντα ραντεβού σας';
-  else if (/rate.limit|too many|over_email_send_rate_limit/i.test(`${code} ${message}`)) userMessage = 'Έγιναν πολλές προσπάθειες Περιμένετε λίγο πριν προσπαθήσετε ξανά';
-  else if (/cutoff|cancellation.*period|too late|cancellation_window/i.test(message)) userMessage = 'Η προθεσμία ηλεκτρονικής αλλαγής έχει λήξει Επικοινωνήστε με το κατάστημα';
+  else if (/BOOKING_LIMIT_REACHED/.test(message)) userMessage = 'Έχετε φτάσει το όριο ενεργών μελλοντικών κρατήσεων. Διαχειριστείτε πρώτα τα υπάρχοντα ραντεβού σας';
+  else if (/rate.limit|too many|over_email_send_rate_limit/i.test(`${code} ${message}`)) userMessage = 'Έγιναν πολλές προσπάθειες. Περιμένετε λίγο πριν προσπαθήσετε ξανά';
+  else if (/cutoff|cancellation.*period|too late|cancellation_window/i.test(message)) userMessage = 'Η προθεσμία ηλεκτρονικής αλλαγής έχει λήξει. Επικοινωνήστε με το κατάστημα';
   else if (/not authorized|not authenticated|permission|42501|PGRST301|JWT.*expired/i.test(`${code} ${message}`)) userMessage = 'Συνδεθείτε με τον λογαριασμό που έχει πρόσβαση σε αυτή την ενέργεια';
-  else if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(message)) userMessage = 'Δεν υπάρχει σύνδεση με τον διακομιστή Ελέγξτε τη σύνδεσή σας και προσπαθήστε ξανά';
+  else if (/Failed to fetch|NetworkError|Load failed|fetch failed/i.test(message)) userMessage = 'Δεν υπάρχει σύνδεση με τον διακομιστή. Ελέγξτε τη σύνδεσή σας και προσπαθήστε ξανά';
   else if (/hours|schedule|time.off|invalid.*time|outside|notice/i.test(message)) userMessage = 'Η ώρα δεν βρίσκεται στο διαθέσιμο ωράριο του καταστήματος';
   else if (/published|inactive|not found/i.test(message)) userMessage = 'Αυτή η υπηρεσία ή το κατάστημα δεν είναι διαθέσιμο για κράτηση';
   const result = new Error(message || userMessage);

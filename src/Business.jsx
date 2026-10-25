@@ -101,8 +101,8 @@ function DemoBusiness({ onBack, bookings = [] }) {
   function authSubmit(event) {
     event.preventDefault();
     if (signup && String(new FormData(event.currentTarget).get('business')).trim().length < 2) { setNotice('Συμπληρώστε όνομα επιχείρησης με τουλάχιστον 2 χαρακτήρες'); return; }
-    if (signup) setNotice('Η φόρμα είναι δοκιμαστική Τα στοιχεία σας δεν αποθηκεύτηκαν και δεν στάλθηκε αίτημα εγγραφής Δείτε τη δοκιμαστική έκδοση παρακάτω');
-    else setNotice('Η σύνδεση με πραγματικό λογαριασμό δεν έχει ενεργοποιηθεί ακόμη Μπορείτε να εξερευνήσετε το δοκιμαστικό ημερολόγιο χωρίς λογαριασμό');
+    if (signup) setNotice('Η φόρμα είναι δοκιμαστική. Τα στοιχεία σας δεν αποθηκεύτηκαν και δεν στάλθηκε αίτημα εγγραφής. Δείτε τη δοκιμαστική έκδοση παρακάτω');
+    else setNotice('Η σύνδεση με πραγματικό λογαριασμό δεν έχει ενεργοποιηθεί ακόμη. Μπορείτε να εξερευνήσετε το δοκιμαστικό ημερολόγιο χωρίς λογαριασμό');
     event.currentTarget.reset();
   }
 
@@ -114,8 +114,8 @@ function DemoBusiness({ onBack, bookings = [] }) {
     const minutes = (time) => { const [hour, minute] = time.split(':').map(Number); return hour * 60 + minute; };
     const start = minutes(appointment.time);
     const end = start + appointment.service.duration;
-    if (end > 19 * 60) { showToast('Το ραντεβού πρέπει να ολοκληρώνεται μέχρι τις 19:00 Επιλέξτε νωρίτερη ώρα', 'error'); return; }
-    if ([...sampleAppointments, ...added, ...salonBookings].some((item) => item.date === appointment.date && item.staff === appointment.staff && !canceled.includes(item.id) && start < minutes(item.time) + (item.service?.duration || 60) && end > minutes(item.time))) { showToast('Υπάρχει ήδη ραντεβού για αυτόν τον επαγγελματία εκείνη την ώρα Επιλέξτε άλλη ώρα', 'error'); return; }
+    if (end > 19 * 60) { showToast('Το ραντεβού πρέπει να ολοκληρώνεται μέχρι τις 19:00. Επιλέξτε νωρίτερη ώρα', 'error'); return; }
+    if ([...sampleAppointments, ...added, ...salonBookings].some((item) => item.date === appointment.date && item.staff === appointment.staff && !canceled.includes(item.id) && start < minutes(item.time) + (item.service?.duration || 60) && end > minutes(item.time))) { showToast('Υπάρχει ήδη ραντεβού για αυτόν τον επαγγελματία εκείνη την ώρα. Επιλέξτε άλλη ώρα', 'error'); return; }
     setAdded((items) => [...items, appointment]);
     setSelectedDate(new Date(`${appointment.date}T12:00:00Z`));
     setModal(null);
@@ -125,7 +125,7 @@ function DemoBusiness({ onBack, bookings = [] }) {
   if (view === 'login') return <main className="business-page business-auth">
     <button className="biz-back-link" onClick={onBack}><ArrowLeft size={17} /> Πίσω στην εξερεύνηση</button>
     <section className="biz-auth-card">
-      <div className="biz-auth-photo"><div className="biz-auth-photo-overlay"><span className="biz-photo-eyebrow">Ο ΧΩΡΟΣ ΣΑΣ ΟΙ ΑΝΘΡΩΠΟΙ ΣΑΣ</span><p>Περισσότερος χρόνος<br />για ό,τι αγαπάτε</p><span>Εμείς φροντίζουμε τα ραντεβού</span></div></div>
+      <div className="biz-auth-photo"><div className="biz-auth-photo-overlay"><span className="biz-photo-eyebrow">Ο ΧΩΡΟΣ ΣΑΣ. ΟΙ ΑΝΘΡΩΠΟΙ ΣΑΣ</span><p>Περισσότερος χρόνος<br />για ό,τι αγαπάτε</p><span>Εμείς φροντίζουμε τα ραντεβού</span></div></div>
       <div className="biz-auth-content">
         <Brand />
         <span className="biz-eyebrow">ΓΙΑ ΕΠΑΓΓΕΛΜΑΤΙΕΣ</span>
@@ -141,7 +141,7 @@ function DemoBusiness({ onBack, bookings = [] }) {
         <p className="biz-auth-switch">{signup ? 'Έχετε ήδη λογαριασμό;' : 'Είστε νέος εδώ;'} <button onClick={() => { setSignup(!signup); setNotice(''); }}>{signup ? 'Σύνδεση' : 'Εγγραφή καταστήματος'}</button></p>
         <div className="biz-auth-divider"><span>ή γνωρίστε το Eneres</span></div>
         <button className="biz-demo-button" onClick={() => setView('dashboard')}><LayoutDashboard size={18} /> Δείτε τη δοκιμαστική έκδοση <ArrowRight size={17} /></button>
-        <p className="biz-small-note">Χωρίς λογαριασμό Χωρίς πραγματικά δεδομένα ή χρεώσεις</p>
+        <p className="biz-small-note">Χωρίς λογαριασμό. Χωρίς πραγματικά δεδομένα ή χρεώσεις</p>
       </div>
     </section>
   </main>;
@@ -157,7 +157,7 @@ function DemoBusiness({ onBack, bookings = [] }) {
         <button className="biz-sidebar-exit" onClick={() => { setView('login'); setNotice(''); }}>Έξοδος από τη δοκιμή <ArrowRight size={16} /></button>
       </aside>
       <section className="biz-calendar-content">
-        <header className="biz-calendar-heading"><div><span className="biz-eyebrow">Η ΕΠΙΧΕΙΡΗΣΗ ΣΑΣ, ΜΕ ΜΙΑ ΜΑΤΙΑ</span><h1>Μια όμορφη μέρα ξεκινά</h1><p className="biz-muted">Λίγη οργάνωση Περισσότερη δημιουργία</p></div><button className="biz-primary biz-add-desktop" onClick={() => { setServiceIndex(0); setModal('add'); }}><Plus size={18} /> Νέο ραντεβού</button></header>
+        <header className="biz-calendar-heading"><div><span className="biz-eyebrow">Η ΕΠΙΧΕΙΡΗΣΗ ΣΑΣ, ΜΕ ΜΙΑ ΜΑΤΙΑ</span><h1>Μια όμορφη μέρα ξεκινά</h1><p className="biz-muted">Λίγη οργάνωση. Περισσότερη δημιουργία</p></div><button className="biz-primary biz-add-desktop" onClick={() => { setServiceIndex(0); setModal('add'); }}><Plus size={18} /> Νέο ραντεβού</button></header>
         <div className="biz-stat-grid"><div className="biz-stat"><span className="biz-stat-icon biz-peach"><CalendarDays size={20} /></span><div><strong>{appointments.length}</strong><span>ραντεβού</span></div></div><div className="biz-stat"><span className="biz-stat-icon biz-green"><TrendingUp size={20} /></span><div><strong>{money(revenue)}</strong><span>προγραμματισμένη αξία</span></div></div><div className="biz-stat"><span className="biz-stat-icon biz-blue"><Users size={20} /></span><div><strong>{appointments.filter((item) => !String(item.id).startsWith('business-demo')).length}</strong><span>νέες κρατήσεις</span></div></div></div>
         <section className="biz-calendar-card">
           <div className="biz-calendar-toolbar"><div><h2>Ημερολόγιο</h2><span>{dayLabel(selectedDate, { month: 'long', year: 'numeric' })}</span></div><div className="biz-date-controls"><button onClick={() => setSelectedDate(today())}>Σήμερα</button><button aria-label="Προηγούμενη εβδομάδα" onClick={() => setSelectedDate(shiftDate(selectedDate, -7))}><ChevronLeft size={18} /></button><button aria-label="Επόμενη εβδομάδα" onClick={() => setSelectedDate(shiftDate(selectedDate, 7))}><ChevronRight size={18} /></button></div></div>
@@ -168,7 +168,7 @@ function DemoBusiness({ onBack, bookings = [] }) {
             {!appointments.length && <div className="biz-empty-day"><CalendarDays size={32} /><h3>Μια ελεύθερη μέρα</h3><p>Δεν υπάρχουν ραντεβού για αυτή την ημερομηνία</p><button onClick={() => { setServiceIndex(0); setModal('add'); }}>Προσθήκη ραντεβού <Plus size={15} /></button></div>}
           </div>
         </section>
-        <p className="biz-calendar-note">Ημερολόγιο δοκιμαστικού καταστήματος Atelier Hair Studio Οι ώρες εμφανίζονται στη ζώνη ώρας Ελλάδας / Κύπρου {storageAvailable ? 'Οι αλλαγές αποθηκεύονται μόνο σε αυτή τη συσκευή' : 'Η τοπική αποθήκευση δεν είναι διαθέσιμη Οι αλλαγές διατηρούνται μόνο μέχρι να κλείσετε αυτή τη σελίδα'} Τα δοκιμαστικά δεδομένα δεν αποστέλλονται σε πραγματικό κατάστημα</p>
+        <p className="biz-calendar-note">Ημερολόγιο δοκιμαστικού καταστήματος Atelier Hair Studio. Οι ώρες εμφανίζονται στη ζώνη ώρας Ελλάδας / Κύπρου {storageAvailable ? 'Οι αλλαγές αποθηκεύονται μόνο σε αυτή τη συσκευή' : 'Η τοπική αποθήκευση δεν είναι διαθέσιμη. Οι αλλαγές διατηρούνται μόνο μέχρι να κλείσετε αυτή τη σελίδα'} Τα δοκιμαστικά δεδομένα δεν αποστέλλονται σε πραγματικό κατάστημα</p>
       </section>
     </div>
     <button className="biz-mobile-add" aria-label="Προσθήκη νέου ραντεβού" onClick={() => { setServiceIndex(0); setModal('add'); }}><Plus size={26} /></button>

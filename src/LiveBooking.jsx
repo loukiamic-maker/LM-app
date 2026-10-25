@@ -64,8 +64,8 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
   const verified = Boolean(user?.id && user.email && user.email_confirmed_at);
   const selectedStillAvailable = Boolean(slot && slots.some((value) => slotKey(value) === slotKey(slot)));
   const cancellationNote = cancellationHours === 0
-    ? 'Η ακύρωση μέσω Eneres είναι δυνατή πριν από την ώρα έναρξης Για μεταγενέστερες αλλαγές επικοινωνήστε με το κατάστημα'
-    : `Η ακύρωση μέσω Eneres είναι δυνατή έως ${cancellationHours} ώρες πριν από την έναρξη Μετά, επικοινωνήστε με το κατάστημα`;
+    ? 'Η ακύρωση μέσω Eneres είναι δυνατή πριν από την ώρα έναρξης. Για μεταγενέστερες αλλαγές επικοινωνήστε με το κατάστημα'
+    : `Η ακύρωση μέσω Eneres είναι δυνατή έως ${cancellationHours} ώρες πριν από την έναρξη. Μετά, επικοινωνήστε με το κατάστημα`;
 
   useEffect(() => {
     mounted.current = true;
@@ -112,7 +112,7 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
     setSlotsLoading(true);
     getSlots(service.id, date, staffChoice === 'any' ? null : staffChoice)
       .then((result) => { if (active) setSlots(Array.isArray(result) ? result : []); })
-      .catch((failure) => { if (active) setSlotsError(userMessage(failure, 'Δεν ήταν δυνατή η φόρτωση των διαθέσιμων ωρών Δοκιμάστε ξανά')); })
+      .catch((failure) => { if (active) setSlotsError(userMessage(failure, 'Δεν ήταν δυνατή η φόρτωση των διαθέσιμων ωρών. Δοκιμάστε ξανά')); })
       .finally(() => { if (active) setSlotsLoading(false); });
     return () => { active = false; };
   }, [service?.id, date, staffChoice, refreshIndex]);
@@ -131,12 +131,12 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
         setSlots(next); setSlotsError('');
         if (slot && !next.some(value => slotKey(value) === slotKey(slot))) {
           setSlot(null); setStep(2);
-          setError('Η ώρα δεν είναι πλέον διαθέσιμη Επιλέξτε μια νέα ώρα');
+          setError('Η ώρα δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα');
         }
       } catch {
         if (!active) return;
         setSlots([]); setSlot(null); setStep(2);
-        setSlotsError('Η διαθεσιμότητα δεν μπόρεσε να ενημερωθεί Δοκιμάστε ξανά');
+        setSlotsError('Η διαθεσιμότητα δεν μπόρεσε να ενημερωθεί. Δοκιμάστε ξανά');
       } finally { refreshing = false; }
     };
     const interval = setInterval(refresh, 15000);
@@ -172,8 +172,8 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
     try {
       const booking = await onConfirm(payload);
       if (!booking?.id || booking.status !== 'confirmed') {
-        const failure = new Error('Δεν λάβαμε επιβεβαιωμένη κράτηση Ελέγξτε τα ραντεβού σας πριν δοκιμάσετε ξανά');
-        if (booking?.status === 'cancelled') { failure.code = '409'; failure.userMessage = 'Αυτό το αίτημα κράτησης έχει ακυρωθεί Επιλέξτε ξανά ημέρα και ώρα για νέα κράτηση'; }
+        const failure = new Error('Δεν λάβαμε επιβεβαιωμένη κράτηση. Ελέγξτε τα ραντεβού σας πριν δοκιμάσετε ξανά');
+        if (booking?.status === 'cancelled') { failure.code = '409'; failure.userMessage = 'Αυτό το αίτημα κράτησης έχει ακυρωθεί. Επιλέξτε ξανά ημέρα και ώρα για νέα κράτηση'; }
         throw failure;
       }
       if (mounted.current) setConfirmed(booking);
@@ -183,10 +183,10 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
         setSlot(null);
         setStep(2);
         setRefreshIndex((value) => value + 1);
-        setError('Η ώρα που επιλέξατε δεν είναι πλέον διαθέσιμη Οι διαθέσιμες ώρες ανανεώθηκαν· επιλέξτε μια άλλη');
+        setError('Η ώρα που επιλέξατε δεν είναι πλέον διαθέσιμη. Οι διαθέσιμες ώρες ανανεώθηκαν· επιλέξτε μια άλλη');
       } else {
         // Keep the same idempotency key after an uncertain network response: retrying cannot create a second booking.
-        setError(userMessage(failure, 'Η κράτηση δεν ολοκληρώθηκε Δοκιμάστε ξανά'));
+        setError(userMessage(failure, 'Η κράτηση δεν ολοκληρώθηκε. Δοκιμάστε ξανά'));
       }
     } finally {
       submitting.current = false;
@@ -213,7 +213,7 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
           <div><UserRound size={17}/>{confirmed.staff}</div>
           <div><Store size={17}/>Πληρωμή στο κατάστημα · {euros(confirmed.service.price)}</div>
         </div>
-        <p className="booking-live-success-note">Θα βρείτε την κράτηση στην ενότητα «Τα ραντεβού μου» Η πληρωμή γίνεται απευθείας στο κατάστημα</p>
+        <p className="booking-live-success-note">Θα βρείτε την κράτηση στην ενότητα «Τα ραντεβού μου». Η πληρωμή γίνεται απευθείας στο κατάστημα</p>
         <p className="booking-live-policy">{cancellationNote}</p>
         <button type="button" className="booking-primary" onClick={onClose}>Ολοκλήρωση <Check size={18}/></button>
       </div> : <>
@@ -235,8 +235,8 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
               <strong className="booking-price">{euros(item.price)}</strong>
               <span className="booking-radio">{service?.id === item.id && <span/>}</span>
             </button>)}
-          </div> : <p className="booking-empty">Ο χώρος δεν προσφέρει αυτή τη στιγμή υπηρεσίες για online κράτηση Επιστρέψτε αργότερα</p>}
-          <div className="booking-reassurance"><ShieldCheck size={17}/>Χωρίς ηλεκτρονική χρέωση Πληρώνετε στο κατάστημα</div>
+          </div> : <p className="booking-empty">Ο χώρος δεν προσφέρει αυτή τη στιγμή υπηρεσίες για online κράτηση. Επιστρέψτε αργότερα</p>}
+          <div className="booking-reassurance"><ShieldCheck size={17}/>Χωρίς ηλεκτρονική χρέωση. Πληρώνετε στο κατάστημα</div>
           <button type="button" className="booking-primary" disabled={!service} onClick={() => setStep(2)}>Συνέχεια <ArrowRight size={18}/></button>
         </div>}
 
@@ -245,7 +245,7 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
           {staffMembers.length ? <div className="booking-live-staff" role="group" aria-label="Επιλογή επαγγελματία">
             <button type="button" className={`booking-staff ${staffChoice === 'any' ? 'is-selected' : ''}`} onClick={() => { setStaffChoice('any'); setError(''); }} aria-pressed={staffChoice === 'any'}><span className="booking-avatar"><UserRound size={23}/></span><strong>Χωρίς προτίμηση</strong><small>Ο πρώτος διαθέσιμος</small>{staffChoice === 'any' && <Check size={14} className="booking-staff-check"/>}</button>
             {staffMembers.map((person, index) => <button key={person.id} type="button" className={`booking-staff ${staffChoice === person.id ? 'is-selected' : ''}`} onClick={() => { setStaffChoice(person.id); setError(''); }} aria-pressed={staffChoice === person.id}><span className={`booking-avatar booking-avatar-${index % 3}`}>{person.name.slice(0, 1)}</span><strong>{person.name}</strong><small>Η ομάδα του χώρου</small>{staffChoice === person.id && <Check size={14} className="booking-staff-check"/>}</button>)}
-          </div> : <p className="booking-empty">Δεν υπάρχει ενεργός επαγγελματίας για αυτή την υπηρεσία Δοκιμάστε ξανά αργότερα</p>}
+          </div> : <p className="booking-empty">Δεν υπάρχει ενεργός επαγγελματίας για αυτή την υπηρεσία. Δοκιμάστε ξανά αργότερα</p>}
           <div className="booking-date-heading"><h3>Επιλέξτε ημέρα</h3><span>{formatDate(date, timeZone, { month: 'long', year: 'numeric' })}</span></div>
           <div className="booking-live-calendar-nav"><button type="button" aria-label="Προηγούμενες ημέρες" disabled={rangeStart <= today} onClick={() => setRangeStart(addDays(rangeStart, -7) < today ? today : addDays(rangeStart, -7))}><ChevronLeft size={17}/></button><label><CalendarDays size={14}/><span>Άλλη ημερομηνία</span><input aria-label="Ημερομηνία ραντεβού" type="date" value={date} min={today} max={lastDate} onChange={(event) => chooseDate(event.target.value)}/></label><button type="button" aria-label="Επόμενες ημέρες" disabled={addDays(rangeStart, 7) > lastDate} onClick={() => setRangeStart(addDays(rangeStart, 7))}><ChevronRight size={17}/></button></div>
           <div className="booking-days">
@@ -255,7 +255,7 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
           <div className="booking-live-slot-region" aria-live="polite" aria-busy={slotsLoading}>
             {!staffChoice ? <p className="booking-empty">Επιλέξτε επαγγελματία ή «Χωρίς προτίμηση» για να δείτε τις διαθέσιμες ώρες</p> : slotsLoading ? <p className="booking-live-loading"><LoaderCircle size={17} className="booking-live-spinner"/>Αναζητούμε διαθέσιμες ώρες…</p> : slotsError ? <div className="booking-live-slot-error"><p role="alert">{slotsError}</p><button type="button" onClick={() => setRefreshIndex((value) => value + 1)}><RefreshCw size={14}/>Δοκιμή ξανά</button></div> : visibleSlots.length ? <div className="booking-times booking-live-times">
               {visibleSlots.map((value) => <button key={slotKey(value)} type="button" className={slot && slotKey(slot) === slotKey(value) ? 'is-selected' : ''} onClick={() => { setSlot(value); setError(''); }} aria-pressed={Boolean(slot && slotKey(slot) === slotKey(value))} aria-label={`${value.time} · ${value.staffName}`}><strong>{value.time}</strong>{staffChoice === 'any' && <span>{value.staffName}</span>}</button>)}
-            </div> : <p className="booking-empty">Δεν υπάρχουν διαθέσιμες ώρες για αυτή την ημέρα Δοκιμάστε άλλη ημέρα ή άλλον επαγγελματία</p>}
+            </div> : <p className="booking-empty">Δεν υπάρχουν διαθέσιμες ώρες για αυτή την ημέρα. Δοκιμάστε άλλη ημέρα ή άλλον επαγγελματία</p>}
           </div>
           {error && <p className="booking-error" role="alert">{error}</p>}
           <div className="booking-selection-summary"><Scissors size={17}/><span>{service.name}</span><strong>{euros(service.price)}</strong></div>
@@ -275,7 +275,7 @@ export default function LiveBooking({ salon, onClose, onConfirm, initialDate, on
           </>}
           <h3>Πληρωμή</h3>
           <div className="booking-payment-methods"><div className="booking-payment-active"><Store size={19}/><span>Πληρωμή στο κατάστημα</span><span className="booking-radio"><span/></span></div></div>
-          <p className="booking-live-payment-note">Δεν ζητάμε στοιχεία κάρτας Η πληρωμή γίνεται απευθείας στο κατάστημα</p>
+          <p className="booking-live-payment-note">Δεν ζητάμε στοιχεία κάρτας. Η πληρωμή γίνεται απευθείας στο κατάστημα</p>
           <div className="booking-total"><div><span>Υπηρεσία</span><span>{euros(service.price)}</span></div><div><strong>Σύνολο</strong><strong>{euros(service.price)}</strong></div></div>
           <div className="booking-live-cancellation"><ShieldCheck size={18}/><div><strong>Πολιτική ακύρωσης</strong><p>{cancellationNote}</p></div></div>
           <label className="booking-live-ack"><input type="checkbox" required checked={acknowledged} disabled={saving} onChange={(event) => setAcknowledged(event.target.checked)}/><span>Έχω διαβάσει την πολιτική ακύρωσης και κατανοώ ότι το όνομα και το email μου θα χρησιμοποιηθούν από το κατάστημα και την πλατφόρμα Eneres για τη διαχείριση της κράτησης</span></label>

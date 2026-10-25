@@ -26,7 +26,7 @@ psql_test < "$repo_root/supabase/tests/bootstrap.sql" > "$run_dir/bootstrap.log"
 for migration in "$repo_root"/supabase/migrations/*.sql; do
   psql_test < "$migration" > "$run_dir/migration.log" 2>&1 || { cat "$run_dir/migration.log"; exit 1; }
 done
-for test_file in platform owner_calendar admin_billing; do
+for test_file in platform owner_calendar admin_billing photo_storage; do
   psql_test < "$repo_root/supabase/tests/$test_file.sql" > "$run_dir/$test_file.log" 2>&1 || { cat "$run_dir/$test_file.log"; exit 1; }
   # Show substantive outcomes without fixture PII or SQL chatter.
   rg 'NOTICE:  PASS:' "$run_dir/$test_file.log" || cat "$run_dir/$test_file.log"

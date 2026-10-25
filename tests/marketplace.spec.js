@@ -271,3 +271,39 @@ test('mobile results show editable search controls after searching without float
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(resultScrollY + 200);
   await expect.poll(() => page.locator('.search-bar').evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0);
 });
+
+test('results stack service over city and brand accents preserve internal sentence punctuation', async ({ page }) => {
+  const accent = await page.locator('.hero h1 em').evaluate(element => getComputedStyle(element).color);
+  const story = page.locator('.business-banner-copy h2 em');
+  await expect(story).toHaveText('Η επόμενη όμορφη ιστορία');
+  await expect(story).toHaveCSS('color', accent);
+  await expect(story).toHaveCSS('font-style', 'italic');
+  await page.getByRole('button', { name: 'Barber', exact: true }).click();
+  await chooseCity(page, 'Παραλίμνι');
+  await page.getByRole('button', { name: 'Αναζήτηση', exact: true }).click();
+  const heading = page.locator('.recommendations-title h2');
+  await expect(heading.locator('.results-service')).toHaveText('Barber shops');
+  await expect(heading.locator('.results-city')).toHaveText('Παραλίμνι');
+  await expect(heading).not.toContainText('·');
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const placement = await heading.evaluate(element => {
+      const service = element.querySelector('.results-service').getBoundingClientRect();
+      const city = element.querySelector('.results-city').getBoundingClientRect();
+      return { serviceBottom: service.bottom, cityTop: city.top, serviceX: service.x, cityX: city.x };
+    });
+    expect(placement.serviceBottom).toBeLessThanOrEqual(placement.cityTop + 1);
+    expect(Math.abs(placement.serviceX - placement.cityX)).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.locator('.footer-nav').getByRole('button', { name: 'Το Eneres', exact: true }).click();
+  const about = page.getByRole('dialog');
+  await expect(about.getByRole('heading', { name: 'Eneres: Η φροντίδα σας, πιο κοντά', exact: true })).toBeVisible();
+  await expect(about.locator('.about-brand-name')).toHaveText('Eneres:');
+  await expect(about.locator('.about-brand-name')).toHaveCSS('color', accent);
+  await expect(about.locator('.about-brand-name')).toHaveCSS('font-style', 'normal');
+  const paragraphs = await about.locator('p').allTextContents();
+  expect(paragraphs[0]).toContain('Κύπρο. Ανακαλύψτε');
+  expect(paragraphs[1]).toContain('έκδοση. Οι χώροι');
+  expect(paragraphs.every(text => !text.trim().endsWith('.'))).toBe(true);
+});

@@ -94,11 +94,11 @@ export function AccountPanel({ onClose }) {
       } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl(), data: { full_name: name } } });
         if (error) throw error;
-        setNotice('Ελέγξτε το email σας για να επιβεβαιώσετε τον λογαριασμό Μετά την επιβεβαίωση, συνδεθείτε εδώ');
+        setNotice('Ελέγξτε το email σας για να επιβεβαιώσετε τον λογαριασμό. Μετά την επιβεβαίωση, συνδεθείτε εδώ');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        setNotice('Συνδεθήκατε Μπορείτε να συνεχίσετε την κράτηση');
+        setNotice('Συνδεθήκατε. Μπορείτε να συνεχίσετε την κράτηση');
       }
     });
   }
@@ -119,6 +119,6 @@ export function AccountPanel({ onClose }) {
       <button className="account-primary" disabled={busy}>{busy ? <LoaderCircle className="account-spin" size={18} /> : null}{passwordMode ? 'Αποθήκευση κωδικού' : user ? 'Αποθήκευση προφίλ' : mode === 'signup' ? 'Δημιουργία λογαριασμού' : mode === 'reset' ? 'Αποστολή οδηγιών' : 'Σύνδεση'}</button>
     </form>
     {user ? <div className="account-actions"><button className="account-secondary" onClick={onClose}>Συνέχεια</button><button disabled={busy} onClick={() => perform(signOut)}><LogOut size={16} />Αποσύνδεση</button></div> : <div className="account-switch"><button onClick={() => switchMode(mode === 'signup' ? 'login' : 'signup')}>{mode === 'signup' ? 'Έχω ήδη λογαριασμό' : 'Δημιουργία λογαριασμού'}</button><button onClick={() => switchMode(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Επιστροφή στη σύνδεση' : 'Ξέχασα τον κωδικό'}</button></div>}
-    <p className="account-footer"><ShieldCheck size={13} />Πληρωμή μόνο στο κατάστημα Δεν ζητάμε στοιχεία κάρτας</p>
+    <p className="account-footer"><ShieldCheck size={13} />Πληρωμή μόνο στο κατάστημα. Δεν ζητάμε στοιχεία κάρτας</p>
   </section></div>;
 }

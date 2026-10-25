@@ -96,7 +96,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
     event.preventDefault();
     if (submitted.current) return;
     if (name.trim().length < 2) { setError('Γράψτε το όνομά σας με τουλάχιστον δύο χαρακτήρες, χωρίς να μετράνε τα κενά'); return; }
-    if (!canContinue) { setError('Η ώρα αυτή δεν είναι πλέον διαθέσιμη Επιλέξτε μια νέα ώρα'); setStep(2); return; }
+    if (!canContinue) { setError('Η ώρα αυτή δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα'); setStep(2); return; }
     submitted.current = true;
     const booking = {
       id: crypto.randomUUID(), salonId: salon.id, salonName: salon.name,
@@ -108,7 +108,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
       setConfirmed(true);
     } catch {
       submitted.current = false;
-      setError('Η κράτηση δεν αποθηκεύτηκε Προσπαθήστε ξανά');
+      setError('Η κράτηση δεν αποθηκεύτηκε. Προσπαθήστε ξανά');
     }
   };
 
@@ -131,7 +131,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
           <div><UserRound size={17}/>{staff}</div>
           <div><Store size={17}/>Πληρωμή στο κατάστημα · {euros(service.price)}</div>
         </div>
-        <p className="booking-local-note">Πρόκειται για επίδειξη Δεν έχει ενημερωθεί πραγματικό κατάστημα και δεν έχει πραγματοποιηθεί χρέωση</p>
+        <p className="booking-local-note">Πρόκειται για επίδειξη. Δεν έχει ενημερωθεί πραγματικό κατάστημα και δεν έχει πραγματοποιηθεί χρέωση</p>
         <button className="booking-primary" onClick={onClose}>Υπέροχα, ευχαριστώ <Check size={18}/></button>
       </div> : <>
         <div className="booking-progress" aria-label={`Βήμα ${step} από 3`}>
@@ -153,7 +153,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
               <span className="booking-radio">{service?.name === item.name && <span/>}</span>
             </button>)}
           </div>
-          <div className="booking-reassurance"><ShieldCheck size={17}/>Χωρίς έξοδα κράτησης Με τον δικό σας ρυθμό</div>
+          <div className="booking-reassurance"><ShieldCheck size={17}/>Χωρίς έξοδα κράτησης. Με τον δικό σας ρυθμό</div>
           <button className="booking-primary" disabled={!service} onClick={() => setStep(2)}>Συνέχεια <ArrowRight size={18}/></button>
         </div>}
 
@@ -173,7 +173,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
           <div className="booking-times">
             {salon.availability.map((slot) => <button key={slot} disabled={unavailable(slot)} className={time === slot ? 'is-selected' : ''} onClick={() => setTime(slot)} aria-pressed={time === slot}>{slot}</button>)}
           </div>
-          {salon.availability.every(unavailable) && <p className="booking-empty">Δεν υπάρχουν διαθέσιμες ώρες Επιλέξτε άλλη ημέρα ή άλλον επαγγελματία</p>}
+          {salon.availability.every(unavailable) && <p className="booking-empty">Δεν υπάρχουν διαθέσιμες ώρες. Επιλέξτε άλλη ημέρα ή άλλον επαγγελματία</p>}
           {error && <p className="booking-error" role="alert">{error}</p>}
           <div className="booking-selection-summary"><Scissors size={17}/><span>{service.name}</span><strong>{euros(service.price)}</strong></div>
           <button className="booking-primary" disabled={!canContinue} onClick={() => { setError(''); setStep(3); }}>Συνέχεια στην επιβεβαίωση <ArrowRight size={18}/></button>
@@ -197,7 +197,7 @@ function DemoBooking({ salon, onClose, onConfirm, bookings = [], initialDate }) 
             <button type="button" disabled><Wallet size={19}/><span>Apple Pay</span><small>Σύντομα</small></button>
           </div>
           <div className="booking-total"><div><span>Υπηρεσία</span><span>{euros(service.price)}</span></div><div><strong>Σύνολο</strong><strong>{euros(service.price)}</strong></div></div>
-          <p className="booking-local-note"><ShieldCheck size={14}/>Δοκιμαστική κράτηση: αποθηκεύεται μόνο σε αυτή τη συσκευή Δεν ενημερώνεται πραγματικό κατάστημα και δεν γίνεται χρέωση</p>
+          <p className="booking-local-note"><ShieldCheck size={14}/>Δοκιμαστική κράτηση: αποθηκεύεται μόνο σε αυτή τη συσκευή. Δεν ενημερώνεται πραγματικό κατάστημα και δεν γίνεται χρέωση</p>
           {error && <p className="booking-error" role="alert">{error}</p>}
           <button className="booking-primary" type="submit">Επιβεβαίωση ραντεβού · {euros(service.price)} <ArrowRight size={17}/></button>
         </form>}

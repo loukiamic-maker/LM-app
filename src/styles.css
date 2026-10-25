@@ -167,3 +167,18 @@
   .recommendations-title:has(.discovery-heading) .sort-select>svg:first-child{display:none}
   .recommendations-title:has(.discovery-heading) .sort-select select{width:72px;max-width:72px}
 }
+
+
+/* Stack the selected service and city in a tighter result heading. */
+.recommendations-title h2.results-heading{display:flex;flex-direction:column;align-items:flex-start;gap:0;font-size:21px;line-height:1.25;letter-spacing:-.5px}
+.recommendations-title h2.discovery-heading.results-heading{font-size:19.5px}
+.results-heading .results-city{display:block;white-space:nowrap}
+.recommendations-title:has(.results-heading) .overline-space{display:none}
+.business-banner-copy h2 em{color:var(--accent);font-weight:400;font-style:italic}
+.about-brand-name{color:var(--accent);font-style:normal}
+@media(min-width:1500px){.recommendations-title h2.discovery-heading.results-heading{font-size:27px}}
+@media(max-width:700px){
+  .recommendations-title h2.results-heading{font-size:16.5px}
+  .recommendations-title h2.discovery-heading.results-heading{font-size:15px}
+}
+@media(max-width:360px){.recommendations-title h2.discovery-heading.results-heading{font-size:13.5px}}

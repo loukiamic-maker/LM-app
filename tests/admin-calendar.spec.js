@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 // These tests exercise the real React interfaces and adapters against isolated
 // HTTP fixtures. They never contact a hosted project or send real payments/mail.
@@ -40,20 +41,36 @@ async function mockOperations(page, options = {}) {
     calls: [], unexpected: [], user: actor(options.admin), ownedSalons: options.noSalon ? [] : [structuredClone(salon)],
     bookings: [], failManual: false, pending: [{ ...structuredClone(salon), status: 'pending', owner_email: 'owner@example.test' }],
     charges: [], subscriptions: [], billing: { monthly_price_cents: null, enabled: false, currency: 'EUR', stripe_enabled: false },
-    providerStatus: { configured: false, manage_configured: false }, ...options,
+    providerStatus: { configured: false, manage_configured: false }, uploads: [], removals: [], failUpload: false, failSalonSave: false, ...options,
   };
   await page.route('**/platform-config*.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.MERAKI_CONFIG=${JSON.stringify({ supabaseUrl: HOST, supabasePublishableKey: 'sb_publishable_isolated_test' })};` }));
   await page.route(`${HOST}/**`, async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname;
-    const body = request.postDataJSON();
+    let body;
+    try { body = request.postDataJSON(); } catch { body = null; }
     state.calls.push({ method: request.method(), path, body, params: Object.fromEntries(url.searchParams), authorization: request.headers().authorization });
     const send = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: JSON.stringify(data) });
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE' } });
+    if (path.startsWith('/storage/v1/object/public/salon-photos/') && request.method() === 'GET') return route.fulfill({ contentType: 'image/png', body: readFileSync('public/images/eneres-flower.png') });
+    if (path.startsWith('/storage/v1/object/salon-photos/') && request.method() === 'POST') {
+      if (state.failUpload) return send({ statusCode: '404', error: 'not_found', message: 'Bucket not found' }, 400);
+      const objectPath = path.slice('/storage/v1/object/salon-photos/'.length);
+      state.uploads.push({ path: objectPath, bytes: request.postDataBuffer()?.length || 0, headers: request.headers() });
+      return send({ Id: crypto.randomUUID(), Key: `salon-photos/${objectPath}` });
+    }
+    if (path === '/storage/v1/object/salon-photos' && request.method() === 'DELETE') { state.removals.push(...body.prefixes); return send(body.prefixes.map(name => ({ name }))); }
     if (path === '/auth/v1/token') return send(session(state.user));
     if (path === '/auth/v1/user') return send(state.user);
     if (path === '/auth/v1/logout') return send({});
     if (path === '/rest/v1/profiles') return send([{ user_id: ids.user, full_name: state.user.user_metadata.full_name }]);
     if (path === '/rest/v1/salons') {
+      if (request.method() === 'PATCH') {
+        if (state.failSalonSave === 'network') return route.abort('failed');
+        if (state.failSalonSave) return send({ code: '42501', message: 'Database update rejected' }, 403);
+        const selected = state.ownedSalons.find(entry => entry.id === url.searchParams.get('id')?.slice(3));
+        Object.assign(selected, body);
+        return send(selected);
+      }
       if (url.searchParams.has('owner_id')) return send(state.ownedSalons);
       if (url.searchParams.has('id')) return send(state.ownedSalons.find(entry => entry.id === url.searchParams.get('id').slice(3)) || null);
       const directory = state.user.app_metadata?.role === 'admin' ? state.pending : state.ownedSalons;
@@ -333,5 +350,93 @@ test('existing Stripe subscription can still be managed when new sales are disab
   const providerCalls = state.calls.filter(call => call.path.includes('/functions/'));
   expect(providerCalls).toHaveLength(1);
   expect(providerCalls[0].body).toMatchObject({ salon_id: ids.salon, action: 'status' });
+  expect(state.unexpected).toEqual([]);
+});
+
+async function openPhotoSettings(page) {
+  await openBusiness(page);
+  await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Η επιχείρησή μου', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Στοιχεία επιχείρησης', exact: true })).toBeVisible();
+  return page.locator('.lb-content').locator('form').first();
+}
+const salonPhoto = () => ({ name: 'my-salon.png', mimeType: 'image/png', buffer: readFileSync('public/images/eneres-flower.png') });
+
+test('business photo selection previews locally before a real storage upload and saved public listing', async ({ page }) => {
+  const state = await mockOperations(page);
+  const form = await openPhotoSettings(page);
+  const input = form.getByRole('button', { name: 'Φωτογραφία επιχείρησης', exact: true });
+  await expect(input).toHaveAttribute('type', 'file');
+  await expect(form.locator('input[type="url"]')).toHaveCount(0);
+  await input.setInputFiles(salonPhoto());
+  const preview = form.getByRole('img', { name: 'Προεπισκόπηση φωτογραφίας επιχείρησης', exact: true });
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute('src', /^blob:/);
+  expect(state.uploads).toHaveLength(0);
+  expect(state.calls.some(call => call.path === '/rest/v1/salons' && call.method === 'PATCH')).toBe(false);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const bounds = await form.locator('.lb-photo-preview').boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+  }
+  await form.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true }).click();
+  await expect.poll(() => state.uploads.length).toBe(1);
+  await expect.poll(() => state.calls.some(call => call.path === '/rest/v1/salons' && call.method === 'PATCH')).toBe(true);
+  expect(state.uploads[0].path).toMatch(new RegExp(`^${ids.salon}/[0-9a-f-]{36}\\.png$`));
+  expect(state.uploads[0].bytes).toBeGreaterThan(0);
+  expect(state.uploads[0].headers.authorization).toMatch(/^Bearer /);
+  expect(state.uploads[0].headers['x-upsert']).toBe('false');
+  const savedUrl = `${HOST}/storage/v1/object/public/salon-photos/${state.uploads[0].path}`;
+  const patch = state.calls.find(call => call.path === '/rest/v1/salons' && call.method === 'PATCH');
+  expect(patch.body.image_url).toBe(savedUrl);
+  expect(JSON.stringify(patch.body)).not.toContain('blob:');
+  expect(JSON.stringify(patch.body)).not.toContain('data:image');
+  await expect(preview).toHaveAttribute('src', savedUrl);
+  await page.locator('.lb-back').click();
+  await expect(page.locator('.salon-photo-button img')).toHaveAttribute('src', savedUrl);
+  expect(state.removals).toEqual([]);
+  expect(state.unexpected).toEqual([]);
+});
+
+test('photo upload and database failures preserve the existing photo and never claim a saved change', async ({ page }) => {
+  const oldUrl = `${HOST}/storage/v1/object/public/salon-photos/${ids.salon}/old-salon.png`;
+  const state = await mockOperations(page, { ownedSalons: [{ ...structuredClone(salon), image_url: oldUrl }], failUpload: true });
+  const form = await openPhotoSettings(page);
+  await expect(form.getByRole('img', { name: 'Προεπισκόπηση φωτογραφίας επιχείρησης', exact: true })).toHaveAttribute('src', oldUrl);
+  await form.getByRole('button', { name: 'Φωτογραφία επιχείρησης', exact: true }).setInputFiles(salonPhoto());
+  await expect(form.getByRole('img', { name: 'Προεπισκόπηση φωτογραφίας επιχείρησης', exact: true })).toHaveAttribute('src', /^blob:/);
+  await form.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  expect(state.calls.filter(call => call.path === '/rest/v1/salons' && call.method === 'PATCH')).toHaveLength(0);
+  expect(state.ownedSalons[0].image_url).toBe(oldUrl);
+  await expect(form.getByRole('img', { name: 'Προεπισκόπηση φωτογραφίας επιχείρησης', exact: true })).toHaveAttribute('src', /^blob:/);
+  state.failUpload = false; state.failSalonSave = 'network';
+  await form.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true }).click();
+  await expect.poll(() => state.calls.filter(call => call.path === '/rest/v1/salons' && call.method === 'PATCH').length).toBe(1);
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(form.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true })).toBeEnabled();
+  expect(state.removals).toEqual([]);
+  expect(state.calls.filter(call => call.path === '/rest/v1/salons' && call.method === 'GET' && call.params.select === 'image_url')).toEqual([]);
+  expect(state.ownedSalons[0].image_url).toBe(oldUrl);
+  await expect(form.getByRole('img', { name: 'Προεπισκόπηση φωτογραφίας επιχείρησης', exact: true })).toHaveAttribute('src', /^blob:/);
+  await expect(page.locator('.lb-global-messages')).not.toContainText('Τα στοιχεία της επιχείρησης αποθηκεύτηκαν');
+  expect(state.unexpected).toEqual([]);
+});
+
+test('business photos reject unsafe file types, oversized images and invalid image bytes before upload', async ({ page }) => {
+  const state = await mockOperations(page);
+  const form = await openPhotoSettings(page);
+  const input = form.getByRole('button', { name: 'Φωτογραφία επιχείρησης', exact: true });
+  for (const file of [
+    { name: 'vector.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>') },
+    { name: 'too-large.png', mimeType: 'image/png', buffer: Buffer.alloc(5 * 1024 * 1024 + 1) },
+    { name: 'not-an-image.png', mimeType: 'image/png', buffer: Buffer.from('This is not a valid image') },
+  ]) {
+    await input.setInputFiles(file);
+    await expect(form.getByRole('alert')).toBeVisible();
+    expect(state.uploads).toEqual([]);
+    expect(state.calls.filter(call => call.path === '/rest/v1/salons' && call.method === 'PATCH')).toEqual([]);
+  }
   expect(state.unexpected).toEqual([]);
 });

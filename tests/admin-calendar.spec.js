@@ -87,16 +87,16 @@ async function mockOperations(page, options = {}) {
     if (path === '/rest/v1/rpc/create_manual_booking' || path === '/rest/v1/rpc/edit_manual_booking') {
       if (state.failManual) return send({ code: '23P01', message: 'bookings_staff_no_overlap' }, 409);
       const record = {
-        id: body.p_booking_id || ids.booking, salon_id: ids.salon, service_id: body.p_service_id, staff_id: body.p_staff_id,
+        id: body.p_booking_id || (state.bookings.some(row => row.id === ids.booking) ? crypto.randomUUID() : ids.booking), salon_id: ids.salon, service_id: body.p_service_id, staff_id: body.p_staff_id,
         starts_at: body.p_starts_at, ends_at: new Date(Date.parse(body.p_starts_at) + body.p_duration_minutes * 60000).toISOString(),
         customer_id: null, customer_name: body.p_customer_name, customer_email: body.p_customer_email,
         customer_phone: body.p_customer_phone, notes: body.p_notes, created_by: ids.user, booking_source: 'offline',
-        service_name: salon.services[0].name, salon_name: salon.name, staff_name: salon.staff[0].name,
+        service_name: salon.services[0].name, salon_name: salon.name, staff_name: state.ownedSalons[0].staff.find(member => member.id === body.p_staff_id)?.name || salon.staff[0].name,
         country: salon.country, timezone: salon.timezone, cancellation_hours: 24, price_cents: body.p_price_cents,
         status: 'confirmed', payment_method: 'pay_at_salon', payment_status: 'unpaid', idempotency_key: body.p_idempotency_key,
         created_at: new Date().toISOString(),
       };
-      state.bookings = [record]; return send(record);
+      state.bookings = [...state.bookings.filter(row => row.id !== record.id), record]; return send(record);
     }
     if (path === '/rest/v1/rpc/list_business_booking_alerts') return send(state.alerts.slice(body.p_offset || 0, (body.p_offset || 0) + (body.p_limit || 100)));
     if (path === '/rest/v1/rpc/acknowledge_business_booking') {
@@ -196,7 +196,7 @@ test('manual offline appointment waits for the server, preserves conflicts and e
   await page.getByRole('button', { name: 'Νέο ραντεβού', exact: true }).click();
   const form = page.getByRole('dialog', { name: 'Νέο χειροκίνητο ραντεβού', exact: true });
   await form.getByLabel('Όνομα πελάτη', { exact: true }).fill('Πελάτης Τηλεφώνου');
-  await form.getByLabel('Τηλέφωνο πελάτη (προαιρετικό)', { exact: true }).fill('99123456');
+  await form.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('99123456');
   await form.getByLabel('Ημερομηνία', { exact: true }).fill(today());
   await form.getByLabel('Ώρα', { exact: true }).fill('16:00');
   await form.getByLabel('Διάρκεια (λεπτά)', { exact: true }).fill('45');
@@ -222,7 +222,7 @@ test('manual offline appointment waits for the server, preserves conflicts and e
   await expect(detail).toContainText('99123456');
   await detail.getByRole('button', { name: 'Επεξεργασία ραντεβού', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Επεξεργασία χειροκίνητου ραντεβού', exact: true });
-  await edit.getByLabel('Τηλέφωνο πελάτη (προαιρετικό)', { exact: true }).fill('99998888');
+  await edit.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('99998888');
   await edit.getByLabel('Ώρα', { exact: true }).fill('17:00');
   await edit.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true }).click();
   await expect(edit).toHaveCount(0);
@@ -264,6 +264,120 @@ function onlineBookingAndAlert() {
     starts_at: booking.starts_at, ends_at: booking.ends_at, price_cents: booking.price_cents, timezone: booking.timezone, booking_status: booking.status, booking,
   } };
 }
+
+
+// Native validation prevents incomplete saves; the submit handler independently
+// validates formatted phones, prices and shared-calendar conflicts.
+test('manual bookings require every appointment field and normalize a phone without treating a free service as missing', async ({ page }) => {
+  const state = await mockOperations(page);
+  await openBusiness(page);
+  await page.getByRole('button', { name: 'Νέο ραντεβού', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Νέο χειροκίνητο ραντεβού', exact: true });
+  const save = dialog.getByRole('button', { name: 'Προσθήκη ραντεβού', exact: true });
+  const requiredLabels = ['Όνομα πελάτη', 'Τηλέφωνο πελάτη', 'Υπηρεσία', 'Επαγγελματίας', 'Ημερομηνία', 'Ώρα', 'Τιμή (€)'];
+  for (const label of requiredLabels) {
+    const field = ['Υπηρεσία', 'Επαγγελματίας'].includes(label) ? dialog.getByRole('combobox', { name: label, exact: true }) : dialog.getByLabel(label, { exact: true });
+    await expect(field).toHaveAttribute('required', '');
+  }
+  await expect(dialog.getByLabel('Email πελάτη (προαιρετικό)', { exact: true })).not.toHaveAttribute('required', '');
+  await dialog.getByLabel('Όνομα πελάτη', { exact: true }).fill('Άννα Δοκιμή');
+  await dialog.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('99123456');
+  await dialog.getByLabel('Ώρα', { exact: true }).fill('14:00');
+  for (const label of ['Όνομα πελάτη', 'Τηλέφωνο πελάτη', 'Ημερομηνία', 'Ώρα', 'Τιμή (€)']) {
+    const field = dialog.getByLabel(label, { exact: true });
+    const value = await field.inputValue();
+    await field.fill('');
+    await save.click();
+    expect(await field.evaluate(element => element.validity.valueMissing)).toBe(true);
+    expect(state.calls.filter(call => call.path.endsWith('/create_manual_booking'))).toHaveLength(0);
+    await field.fill(value);
+  }
+  await dialog.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('123abc456');
+  await save.click();
+  await expect(dialog.getByRole('alert')).toContainText('έγκυρο τηλέφωνο');
+  expect(state.calls.filter(call => call.path.endsWith('/create_manual_booking'))).toHaveLength(0);
+  await dialog.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('+357 (99) 123-456');
+  await dialog.getByLabel('Τιμή (€)', { exact: true }).fill('0');
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  const request = state.calls.find(call => call.path.endsWith('/create_manual_booking'));
+  expect(request.body).toMatchObject({ p_customer_name: 'Άννα Δοκιμή', p_customer_phone: '+35799123456', p_price_cents: 0, p_service_id: ids.service, p_staff_id: ids.staff });
+  expect(request.body.p_starts_at).toMatch(/T\d{2}:00:00\.000Z$/);
+  expect(state.unexpected).toEqual([]);
+});
+
+test('manual booking conflicts preserve inputs while adjacent times, another professional and editing the same row remain possible', async ({ page }) => {
+  const { booking } = onlineBookingAndAlert();
+  const secondStaff = { id: '10000000-0000-4000-8000-000000000008', salon_id: ids.salon, name: 'Νίκος Επαγγελματίας', active: true };
+  const venue = { ...structuredClone(salon), staff: [...structuredClone(salon.staff), secondStaff] };
+  const state = await mockOperations(page, { ownedSalons: [venue], bookings: [booking] });
+  await openBusiness(page);
+  await page.getByRole('button', { name: 'Νέο ραντεβού', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Νέο χειροκίνητο ραντεβού', exact: true });
+  await dialog.getByLabel('Όνομα πελάτη', { exact: true }).fill('Γειτονική Κράτηση');
+  await dialog.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('99123456');
+  await dialog.getByLabel('Ώρα', { exact: true }).fill('10:30');
+  await dialog.getByRole('button', { name: 'Προσθήκη ραντεβού', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('ήδη κράτηση');
+  await expect(dialog.getByLabel('Όνομα πελάτη', { exact: true })).toHaveValue('Γειτονική Κράτηση');
+  await expect(dialog.getByLabel('Ώρα', { exact: true })).toHaveValue('10:30');
+  expect(state.calls.filter(call => call.path.endsWith('/create_manual_booking'))).toHaveLength(0);
+  await dialog.getByLabel('Ώρα', { exact: true }).fill('11:00');
+  await dialog.getByRole('button', { name: 'Προσθήκη ραντεβού', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const adjacent = state.bookings.find(row => row.customer_name === 'Γειτονική Κράτηση');
+  expect(adjacent.staff_id).toBe(ids.staff);
+  await page.getByRole('button', { name: 'Νέο ραντεβού', exact: true }).click();
+  const another = page.getByRole('dialog', { name: 'Νέο χειροκίνητο ραντεβού', exact: true });
+  await another.getByLabel('Όνομα πελάτη', { exact: true }).fill('Άλλος Επαγγελματίας');
+  await another.getByLabel('Τηλέφωνο πελάτη', { exact: true }).fill('99123456');
+  await another.getByLabel('Ώρα', { exact: true }).fill('10:30');
+  await another.getByRole('combobox', { name: 'Επαγγελματίας', exact: true }).selectOption(secondStaff.id);
+  await another.getByRole('button', { name: 'Προσθήκη ραντεβού', exact: true }).click();
+  await expect(another).toHaveCount(0);
+  expect(state.calls.filter(call => call.path.endsWith('/create_manual_booking'))).toHaveLength(2);
+  expect(state.bookings.find(row => row.customer_name === 'Άλλος Επαγγελματίας').staff_id).toBe(secondStaff.id);
+  await page.locator('.lb-booking-row').filter({ hasText: 'Γειτονική Κράτηση' }).click();
+  await page.getByRole('button', { name: 'Επεξεργασία ραντεβού', exact: true }).click();
+  const edit = page.getByRole('dialog', { name: 'Επεξεργασία χειροκίνητου ραντεβού', exact: true });
+  await edit.getByLabel('Ώρα', { exact: true }).fill('10:30');
+  await edit.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true }).click();
+  await expect(edit.getByRole('alert')).toContainText('ήδη κράτηση');
+  expect(state.calls.filter(call => call.path.endsWith('/edit_manual_booking'))).toHaveLength(0);
+  expect(state.bookings.find(row => row.id === adjacent.id).starts_at).toBe(adjacent.starts_at);
+  await edit.getByLabel('Ώρα', { exact: true }).fill('11:00');
+  await edit.getByRole('button', { name: 'Αποθήκευση αλλαγών', exact: true }).click();
+  await expect(edit).toHaveCount(0);
+  expect(state.calls.filter(call => call.path.endsWith('/edit_manual_booking'))).toHaveLength(1);
+  expect(state.unexpected).toEqual([]);
+});
+
+test('calendar colors identify Eneres and manual bookings across professionals and completion states', async ({ page }) => {
+  const { booking } = onlineBookingAndAlert();
+  const secondStaff = { id: '10000000-0000-4000-8000-000000000008', salon_id: ids.salon, name: 'Νίκος Επαγγελματίας', active: true };
+  const venue = { ...structuredClone(salon), staff: [...structuredClone(salon.staff), secondStaff] };
+  const entry = (id, name, staff, source, status, offset) => ({ ...booking, id, customer_name: name, staff_id: staff.id, staff_name: staff.name, booking_source: source, status, starts_at: new Date(Date.parse(booking.starts_at) + offset * 3600000).toISOString(), ends_at: new Date(Date.parse(booking.ends_at) + offset * 3600000).toISOString() });
+  const bookings = [booking,
+    entry('10000000-0000-4000-8000-000000000011', 'Eneres Ολοκληρωμένο', secondStaff, 'online', 'completed', 1),
+    entry('10000000-0000-4000-8000-000000000012', 'Χειροκίνητο Επιβεβαιωμένο', venue.staff[0], 'offline', 'confirmed', 2),
+    entry('10000000-0000-4000-8000-000000000013', 'Χειροκίνητο Ολοκληρωμένο', secondStaff, 'offline', 'completed', 3)];
+  const state = await mockOperations(page, { ownedSalons: [venue], bookings });
+  await openBusiness(page);
+  await expect(page.getByRole('heading', { name: 'Το ημερολόγιο σας', exact: true })).toBeVisible();
+  const online = page.locator('.lb-timeline-booking-online');
+  const offline = page.locator('.lb-timeline-booking-offline');
+  await expect(online).toHaveCount(2);
+  await expect(offline).toHaveCount(2);
+  for (const row of await online.all()) { await expect(row).toHaveCSS('background-color', 'rgb(246, 229, 220)'); await expect(row).toHaveCSS('border-left-color', 'rgb(200, 120, 82)'); }
+  for (const row of await offline.all()) { await expect(row).toHaveCSS('background-color', 'rgb(228, 239, 251)'); await expect(row).toHaveCSS('border-left-color', 'rgb(106, 155, 210)'); }
+  await expect(page.getByLabel('Προέλευση ραντεβού')).toContainText('Από Eneres');
+  await expect(page.getByLabel('Προέλευση ραντεβού')).toContainText('Χειροκίνητο');
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  expect(state.unexpected).toEqual([]);
+});
 
 test('empty business day displays every hour and clicking a free slot prefills a manual appointment', async ({ page }) => {
   const state = await mockOperations(page);

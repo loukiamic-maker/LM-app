@@ -298,7 +298,7 @@ test('results stack service over city and brand accents preserve internal senten
   }
   await page.locator('.eneres-footer-nav').getByRole('button', { name: 'Το Eneres', exact: true }).click();
   const about = page.getByRole('dialog');
-  await expect(about.getByRole('heading', { name: 'Eneres: η φροντίδα σας, πιο κοντά', exact: true })).toBeVisible();
+  await expect(about.getByRole('heading', { name: 'Eneres: η φροντίδα σας πιο κοντά', exact: true })).toBeVisible();
   await expect(about.locator('.about-brand-name')).toHaveText('Eneres:');
   await expect(about.locator('.about-brand-name')).toHaveCSS('color', accent);
   await expect(about.locator('.about-brand-name')).toHaveCSS('font-style', 'normal');

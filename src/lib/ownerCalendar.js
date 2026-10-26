@@ -5,6 +5,9 @@ async function saveManualBooking(name, values) {
   const { data, error } = await supabase.rpc(name, values);
   if (error) {
     const failure = platformError(error);
+    if (/conflict|SLOT_UNAVAILABLE|overlap|23P01|slot_taken/i.test(`${error.code || ''} ${error.message || ''}`)) failure.userMessage = 'Ο επαγγελματίας έχει ήδη κράτηση ή απουσία σε αυτό το διάστημα. Επιλέξτε άλλη ώρα ή επαγγελματία';
+    if (/MANUAL_BOOKING_PRICE_REQUIRED/.test(error.message || '')) failure.userMessage = 'Συμπληρώστε την τιμή του ραντεβού';
+    if (/MANUAL_BOOKING_DATE_INVALID/.test(error.message || '')) failure.userMessage = 'Συμπληρώστε έγκυρη ημερομηνία και ώρα ραντεβού';
     if (['PGRST202', '42883'].includes(error.code)) failure.userMessage = 'Η νέα λειτουργία ημερολογίου χρειάζεται την ενημέρωση της βάσης από τον διαχειριστή';
     throw failure;
   }

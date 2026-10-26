@@ -26,11 +26,15 @@ psql_test < "$repo_root/supabase/tests/bootstrap.sql" > "$run_dir/bootstrap.log"
 for migration in "$repo_root"/supabase/migrations/*.sql; do
   psql_test < "$migration" > "$run_dir/migration.log" 2>&1 || { cat "$run_dir/migration.log"; exit 1; }
 done
-for test_file in platform owner_calendar admin_billing photo_storage booking_alerts signup_phone; do
+for test_file in platform owner_calendar admin_billing photo_storage booking_alerts signup_phone manual_requirements; do
   psql_test < "$repo_root/supabase/tests/$test_file.sql" > "$run_dir/$test_file.log" 2>&1 || { cat "$run_dir/$test_file.log"; exit 1; }
   # Show substantive outcomes without fixture PII or SQL chatter.
   rg 'NOTICE:  PASS:' "$run_dir/$test_file.log" || cat "$run_dir/$test_file.log"
 done
+
+# Reapply the exact production upgrade after loading a legacy phone-less row.
+psql_test < "$repo_root/supabase/migrations/202610260006_manual_booking_requirements.sql" > "$run_dir/manual-rerun.log" 2>&1 || { cat "$run_dir/manual-rerun.log"; exit 1; }
+psql_test -c "select calendar_test.ok((select to_jsonb(b)=s.booking from public.bookings b cross join manual_test.before_upgrade s where b.id='96000000-0000-0000-0000-000000000001'),'manual requirements upgrade is rerunnable and preserves existing phone-less appointments');"
 
 # Two independent sessions race for the same slot. Hold the winning transaction open
 # so the other session genuinely contends instead of issuing a sequential request.

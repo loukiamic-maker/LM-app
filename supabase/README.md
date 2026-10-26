@@ -2,11 +2,12 @@
 
 For a **new project**, apply the migrations in order: `202610240001_booking_platform.sql`,
 `202610240002_owner_calendar.sql`, `202610240003_admin_billing.sql`, then
-`202610250004_salon_photos.sql`, then `202610250005_booking_alerts.sql`, using
+`202610250004_salon_photos.sql`, then `202610250005_booking_alerts.sql`, then
+`202610260006_manual_booking_requirements.sql`, using
 `supabase db push` after linking the project or the privileged SQL Editor.
-For an **existing project with the original booking tables**, apply missing upgrades in order: **002, 003, 004, 005**.
-If the administration/calendar upgrade is already installed, apply **004 only** for photo uploads.
-If photo uploads are already installed, apply **005 only** for signup mobiles and booking alerts.
+For an **existing project with the original booking tables**, apply missing upgrades in order: **002, 003, 004, 005, 006**.
+If the administration/calendar upgrade is already installed, apply **004–006** for photo uploads and subsequent booking updates.
+If photo uploads are already installed, apply **005–006** for signup mobiles, booking alerts and required manual appointment details.
 Never rerun 001, delete tables, or reset the project to install these additions.
 The additive upgrades can be reapplied. Production migrations do not create
 sample businesses or accounts.
@@ -221,3 +222,9 @@ New email accounts supply a canonical country-coded mobile in Auth metadata `mob
 `create_booking_with_contact` creates an online booking with required phone and optional notes in the same transaction as its business alert and private email queue entry. The older booking RPC remains compatible with cached clients. The owner-only inbox supports paginated history and a global unread count. Acknowledgement records that the business has seen the already-confirmed booking; it does not create or approve a second reservation. Cancellation requires a reason and atomically updates the booking, frees online availability, stores history and makes the reason visible to that customer.
 
 Dashboard notifications poll every15 seconds while visible and refresh on focus. They are not browser push notifications. Background email requires the existing private worker and sender configuration; publishing the frontend or applying SQL alone does not send email. Redeploy the updated `process-notifications` worker to include customer contact and cancellation explanations in emails. No real emails or live accounts are created by the tests.
+
+## Required manual appointment details
+
+Apply `migrations/202610260006_manual_booking_requirements.sql` after the earlier upgrades. Generate the copy/paste file with `node scripts/package-manual-booking-upgrade.mjs /workspace/artifacts`. The upgrade is safe to rerun and does not rewrite existing appointments.
+
+New and edited manual appointments require a client name, phone, active service, explicit price, active professional and appointment date/time. Phone formatting is normalized to an optional leading plus and 8–15 digits; an explicit zero price remains valid. The shared staff-calendar exclusion constraint continues to prevent overlaps between online and manual appointments, including concurrent requests. Different professionals can work simultaneously, and adjacent appointments are allowed.

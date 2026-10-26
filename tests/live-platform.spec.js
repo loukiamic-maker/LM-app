@@ -251,7 +251,10 @@ test('customer reschedule and cancellation use server RPC results', async ({ pag
   await expect(page.locator('.appointment-card')).toContainText('12:00');
   expect(state.calls.find(call => call.path.endsWith('/reschedule_booking')).body).toMatchObject({ p_booking_id: ids.booking, p_staff_id: ids.staff });
   await page.getByRole('button', { name: 'Ακύρωση ραντεβού', exact: true }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Ναι, ακύρωση' }).click();
+  const cancelDialog = page.getByRole('dialog', { name: 'Να ακυρώσουμε το ραντεβού;', exact: true });
+  const brandOffset = await cancelDialog.evaluate(element => { const dialog = element.getBoundingClientRect(); const brand = element.querySelector('.dialog-brand').getBoundingClientRect(); return Math.abs(brand.x + brand.width / 2 - dialog.x - dialog.width / 2); });
+  expect(brandOffset).toBeLessThanOrEqual(1);
+  await cancelDialog.getByRole('button', { name: 'Ναι, ακύρωση' }).click();
   await expect(page.locator('.appointment-card')).toContainText('Ακυρωμένο');
   await expect(page.getByRole('button', { name: 'Αλλαγή ώρας', exact: true })).toHaveCount(0);
   expect(state.calls.find(call => call.path.endsWith('/cancel_booking')).body).toEqual({ p_booking_id: ids.booking });

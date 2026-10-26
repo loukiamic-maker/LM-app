@@ -121,7 +121,7 @@ export function NotificationButton({ notifications, onClick }) {
 export function NotificationToast({ notifications, onOpen }) {
   const notice = notifications?.newAlertNotice;
   if (!notice) return null;
-  return <div className="bn-incoming" role="status"><Bell size={20} /><div><strong>{notice.count > 1 ? `${notice.count} νέες κρατήσεις από το Eneres` : 'Νέα κράτηση από το Eneres'}</strong><span>{notice.name || 'Το ημερολόγιό σας ενημερώθηκε'}</span></div><button type="button" onClick={() => { notifications.dismissNotice(); onOpen(); }}>Δείτε την κράτηση<ChevronRight size={15} /></button><button type="button" className="bn-incoming-close" aria-label="Κλείσιμο ειδοποίησης" onClick={notifications.dismissNotice}><X size={16} /></button></div>;
+  return <div className="bn-incoming" role="status"><Bell size={20} /><div><strong>{notice.count > 1 ? `${notice.count} νέες κρατήσεις από το Eneres` : 'Νέα κράτηση από το Eneres'}</strong><span>{notice.name || 'Το ημερολόγιο σας ενημερώθηκε'}</span></div><button type="button" onClick={() => { notifications.dismissNotice(); onOpen(); }}>Δείτε την κράτηση<ChevronRight size={15} /></button><button type="button" className="bn-incoming-close" aria-label="Κλείσιμο ειδοποίησης" onClick={notifications.dismissNotice}><X size={16} /></button></div>;
 }
 
 function AlertDetails({ alert, timezone, notifications, onClose }) {

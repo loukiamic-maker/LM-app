@@ -192,3 +192,5 @@
 .booking-contact-fields textarea{width:100%;resize:vertical;min-height:76px;padding:10px 12px;border:1px solid #e1d6c8;border-radius:8px;background:#fffcf8;font:inherit;color:inherit;line-height:1.6}
 
 @media(min-width:701px){.mobile-menu{display:grid;place-items:center;width:36px;height:36px;border:1px solid #ddd6cb;border-radius:8px}.mobile-menu-panel{position:absolute;top:calc(100% - 1px);right:24px;width:min(340px,calc(100vw - 48px));display:flex;flex-direction:column;gap:4px;padding:12px;background:#fcfaf7;border:1px solid #e5ddd2;border-radius:0 0 12px 12px;box-shadow:0 8px 24px #51402c12}.mobile-menu-panel>button{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px;font-size:12px}}
+
+.info-dialog--centered-brand .brand.dialog-brand{margin-inline:auto}

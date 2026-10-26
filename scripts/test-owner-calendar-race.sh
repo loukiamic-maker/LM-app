@@ -16,7 +16,7 @@ cat > "$run_dir/manual.sql" <<'SQL'
 begin;
 set local role authenticated;
 set local request.jwt.claims='{"sub":"90000000-0000-0000-0000-000000000001","role":"authenticated"}';
-select(public.create_manual_booking('93000000-0000-0000-0000-000000000001','92000000-0000-0000-0000-000000000001','91000000-0000-0000-0000-000000000001',calendar_test.slot(22,'10:00'),'Offline race','94000000-0000-0000-0000-000000000022')).id;
+select(public.create_manual_booking('93000000-0000-0000-0000-000000000001','92000000-0000-0000-0000-000000000001','91000000-0000-0000-0000-000000000001',calendar_test.slot(22,'10:00'),'Offline race','94000000-0000-0000-0000-000000000022',null,'99123456',60,3500)).id;
 select pg_sleep(1);
 commit;
 SQL

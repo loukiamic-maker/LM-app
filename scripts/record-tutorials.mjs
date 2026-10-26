@@ -117,11 +117,11 @@ async function record(kind, browser) {
     await stage('3. Ομάδα και ωράριο', 'Προσθέστε επαγγελματίες και τις ώρες εργασίας τους πριν στείλετε τον χώρο για έγκριση', async () => {
       await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Ομάδα & ωράριο', exact: true }).click(); await page.locator('.lb-hours-editor').scrollIntoViewIfNeeded();
     });
-    await stage('4. Ολόκληρη η ημέρα στο ημερολόγιο', 'Βλέπετε τις κρατήσεις και τα κενά διαστήματα. Αλλάξτε ημέρα ή προσθέστε τηλεφωνικό ραντεβού', async () => {
+    await stage('4. Ολόκληρη η ημέρα στο ημερολόγιο', 'Πορτοκαλί: από Eneres. Γαλάζιο: χειροκίνητα. Επιλέξτε κενή ώρα για νέα κράτηση', async () => {
       await page.getByRole('navigation', { name: 'Διαχείριση επιχείρησης' }).getByRole('button', { name: 'Ημερολόγιο', exact: true }).click(); await page.locator('.lb-calendar').scrollIntoViewIfNeeded(); await delay(900); await page.getByRole('button', { name: 'Νέο ραντεβού', exact: true }).click();
     });
-    await stage('5. Καταχώριση χειροκίνητου ραντεβού', 'Συμπληρώστε πελάτη, επαγγελματία και ώρα. Η αποθήκευση δεσμεύει την ώρα και online', async () => {
-      const dialog = page.getByRole('dialog'); await dialog.getByLabel('Όνομα πελάτη', { exact: true }).fill('Άννα Παράδειγμα'); await dialog.getByLabel('Τηλέφωνο πελάτη (προαιρετικό)').fill('+30 000 000 0000'); await dialog.getByLabel('Ώρα', { exact: true }).fill('15:00'); await dialog.getByRole('button', { name: 'Προσθήκη ραντεβού', exact: true }).click();
+    await stage('5. Καταχώριση χειροκίνητου ραντεβού', 'Υποχρεωτικά: όνομα, τηλέφωνο, υπηρεσία, τιμή, επαγγελματίας, ημερομηνία και ώρα', async () => {
+      const dialog = page.getByRole('dialog'); await dialog.getByLabel('Όνομα πελάτη', { exact: true }).fill('Άννα Παράδειγμα'); await dialog.getByLabel('Τηλέφωνο πελάτη').fill('+30 000 000 0000'); await dialog.getByLabel('Ώρα', { exact: true }).fill('15:00'); await dialog.getByRole('button', { name: 'Προσθήκη ραντεβού', exact: true }).click();
     }, 9);
     await stage('6. Νέα κράτηση από το Eneres', 'Η online κράτηση μπαίνει αυτόματα στο ημερολόγιο και εμφανίζεται στις ειδοποιήσεις', async () => {
       const entry = demoBooking({ name: 'Σοφία Παράδειγμα', hour: 11, minute: 15 }); state.bookings.push(entry); state.alerts.unshift(demoAlert(entry));

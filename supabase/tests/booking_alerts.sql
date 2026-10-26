@@ -98,7 +98,7 @@ select public.create_booking_with_contact('86200000-0000-0000-0000-000000000001'
 set local request.jwt.claims='{"sub":"86000000-0000-0000-0000-000000000001","role":"authenticated"}';
 select test.ok(jsonb_array_length(public.list_business_booking_alerts('86300000-0000-0000-0000-000000000001',1))=1,'history page size is honored');
 select test.ok((public.list_business_booking_alerts('86300000-0000-0000-0000-000000000001',1)->0->>'salon_unread_count')::integer=2,'unread count spans all rows beyond the current page');
-select (public.create_manual_booking('86300000-0000-0000-0000-000000000001','86200000-0000-0000-0000-000000000001','86100000-0000-0000-0000-000000000001',test.slot(40,'12:00'),'Phone Customer','86400000-0000-0000-0000-000000000003',null,'+35799000000')).id as manual_booking \gset
+select (public.create_manual_booking('86300000-0000-0000-0000-000000000001','86200000-0000-0000-0000-000000000001','86100000-0000-0000-0000-000000000001',test.slot(40,'12:00'),'Phone Customer','86400000-0000-0000-0000-000000000003',null,'+35799000000',p_price_cents=>3500)).id as manual_booking \gset
 select test.ok((select count(*) from public.business_booking_alerts where booking_id=:'manual_booking')=0,'offline appointments do not pretend to be new Eneres client bookings');
 select test.ok((public.cancel_booking_with_note(:'manual_booking','Customer asked to reschedule')).cancellation_note='Customer asked to reschedule','calendar cancellation notes also support offline appointments');
 rollback;

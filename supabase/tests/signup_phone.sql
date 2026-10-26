@@ -66,7 +66,7 @@ insert into auth.users(id,email,raw_user_meta_data) values
 select test.fails($q$update auth.users set email='transition-phone@example.test'
  where id='89000000-0000-0000-0000-000000000013'$q$,'23514',
  'adding the first email to an email-less account still requires mobile');
-update auth.users set email='transition-phone@example.test',raw_user_meta_data='{"mobile_phone":"+35799876543"}'
+update auth.users set email='transition-phone@example.test',raw_user_meta_data='{"full_name":"Transition Client","mobile_phone":"+35799876543"}'
  where id='89000000-0000-0000-0000-000000000013';
 select test.ok((select mobile_phone='+35799876543' from public.profiles
  where user_id='89000000-0000-0000-0000-000000000013'),'first-email transition copies the validated phone into the profile');

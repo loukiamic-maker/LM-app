@@ -1,10 +1,11 @@
-// Package the additive required-field upgrade for the Supabase SQL Editor.
+// Package required account and manual-appointment details for the Supabase SQL Editor.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const directory = resolve(process.argv[2] || '/workspace/artifacts');
-const migration = readFileSync(resolve(root, 'supabase/migrations/202610260006_manual_booking_requirements.sql'), 'utf8');
+const migration = ['202610260006_manual_booking_requirements.sql', '202610260007_signup_required_name.sql']
+  .map(name => readFileSync(resolve(root, 'supabase/migrations', name), 'utf8')).join('\n\n');
 const checks = `
 -- Read-only installation checks. These do not create appointments or change data.
 select 'Required manual booking fields' as check_name,
@@ -25,10 +26,17 @@ select 'Private validation helper',
  then 'PASS' else 'CHECK NEEDED' end,
  'Browsers cannot bypass the owner-only booking functions'
 union all
+select 'Required signup name and phone',
+ case when position('SIGNUP_FULL_NAME_REQUIRED' in pg_get_functiondef('private.require_signup_mobile()'::regprocedure))>0
+  and position('SIGNUP_MOBILE_PHONE_REQUIRED' in pg_get_functiondef('private.require_signup_mobile()'::regprocedure))>0
+  and exists(select 1 from pg_trigger where tgrelid='auth.users'::regclass and tgname='eneres_signup_mobile_required' and tgenabled<>'D')
+ then 'PASS' else 'CHECK NEEDED' end,
+ 'New email registrations require a name and country-coded mobile; existing accounts stay unchanged'
+union all
 select 'Existing appointments','PRESERVED','This upgrade only replaces validation logic and does not rewrite existing appointments';
 `;
 mkdirSync(directory, { recursive: true });
-const output = resolve(directory, 'eneres-manual-booking-requirements.sql');
+const output = resolve(directory, 'eneres-account-booking-requirements.sql');
 writeFileSync(output, `${migration}
 ${checks}`);
 console.log(`Created ${output}`);

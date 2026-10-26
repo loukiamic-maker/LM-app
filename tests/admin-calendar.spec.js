@@ -352,7 +352,7 @@ test('manual booking conflicts preserve inputs while adjacent times, another pro
   expect(state.unexpected).toEqual([]);
 });
 
-test('calendar colors identify Eneres and manual bookings across professionals and completion states', async ({ page }) => {
+test('calendar cards show customer phones and identify booking sources across professionals and completion states', async ({ page }) => {
   const { booking } = onlineBookingAndAlert();
   const secondStaff = { id: '10000000-0000-4000-8000-000000000008', salon_id: ids.salon, name: 'Νίκος Επαγγελματίας', active: true };
   const venue = { ...structuredClone(salon), staff: [...structuredClone(salon.staff), secondStaff] };
@@ -374,6 +374,15 @@ test('calendar colors identify Eneres and manual bookings across professionals a
   await expect(page.getByLabel('Προέλευση ραντεβού')).toContainText('Χειροκίνητο');
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
+    for (const row of await page.locator('.lb-timeline-booking').all()) {
+      const phone = row.locator('.lb-timeline-booking-phone');
+      await expect(phone).toHaveText(booking.customer_phone);
+      await expect(phone).toBeVisible();
+      await expect(row).toHaveAttribute('aria-label', new RegExp(booking.customer_phone.replace('+', '\\+')));
+      const bounds = await row.evaluate(element => { const row = element.getBoundingClientRect(); const phone = element.querySelector('.lb-timeline-booking-phone').getBoundingClientRect(); return { rowBottom: row.bottom, phoneBottom: phone.bottom, rowRight: row.right, phoneRight: phone.right }; });
+      expect(bounds.phoneBottom).toBeLessThanOrEqual(bounds.rowBottom);
+      expect(bounds.phoneRight).toBeLessThanOrEqual(bounds.rowRight);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   expect(state.unexpected).toEqual([]);

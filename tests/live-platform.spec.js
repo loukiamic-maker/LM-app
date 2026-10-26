@@ -393,12 +393,13 @@ test('consumer must provide a mobile number and customer notes reach the server 
   expect(state.unexpected).toEqual([]);
 });
 
-test('signup requires a valid mobile number and sends the chosen country prefix to Auth', async ({ page }) => {
+test('signup requires a name and valid mobile number and sends the chosen country prefix to Auth', async ({ page }) => {
   const state = await mockPlatform(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
   const panel = page.locator('.account-panel');
   await panel.getByRole('button', { name: 'Δημιουργία λογαριασμού', exact: true }).click();
+  await expect(panel.getByLabel('Όνομα', { exact: true })).toHaveAttribute('required', '');
   await panel.getByLabel('Όνομα', { exact: true }).fill('Νέος Πελάτης');
   await panel.getByLabel('Email', { exact: true }).fill('new-user@example.test');
   await panel.getByLabel(/^Κωδικός πρόσβασης/).fill('isolated-password-123');
@@ -413,6 +414,14 @@ test('signup requires a valid mobile number and sends the chosen country prefix 
   expect(state.calls.some(call => call.path.endsWith('/auth/v1/signup'))).toBe(false);
   await panel.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true }).selectOption('GR');
   await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('6900000000');
+  await panel.getByLabel('Όνομα', { exact: true }).fill('');
+  await submit.click();
+  expect(state.calls.some(call => call.path.endsWith('/auth/v1/signup'))).toBe(false);
+  await panel.getByLabel('Όνομα', { exact: true }).fill('   ');
+  await submit.click();
+  await expect(panel.getByRole('alert')).toContainText('Συμπληρώστε το όνομά σας');
+  expect(state.calls.some(call => call.path.endsWith('/auth/v1/signup'))).toBe(false);
+  await panel.getByLabel('Όνομα', { exact: true }).fill('Νέος Πελάτης');
   await submit.click();
   await expect(panel.getByRole('status')).toContainText('Ελέγξτε το email σας');
   expect(state.calls.find(call => call.path.endsWith('/auth/v1/signup')).body.data).toEqual({ full_name: 'Νέος Πελάτης', mobile_phone: '+306900000000' });

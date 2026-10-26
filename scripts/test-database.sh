@@ -26,7 +26,7 @@ psql_test < "$repo_root/supabase/tests/bootstrap.sql" > "$run_dir/bootstrap.log"
 for migration in "$repo_root"/supabase/migrations/*.sql; do
   psql_test < "$migration" > "$run_dir/migration.log" 2>&1 || { cat "$run_dir/migration.log"; exit 1; }
 done
-for test_file in platform owner_calendar admin_billing photo_storage booking_alerts signup_phone manual_requirements; do
+for test_file in platform owner_calendar admin_billing photo_storage booking_alerts signup_phone signup_name manual_requirements; do
   psql_test < "$repo_root/supabase/tests/$test_file.sql" > "$run_dir/$test_file.log" 2>&1 || { cat "$run_dir/$test_file.log"; exit 1; }
   # Show substantive outcomes without fixture PII or SQL chatter.
   rg 'NOTICE:  PASS:' "$run_dir/$test_file.log" || cat "$run_dir/$test_file.log"
@@ -35,6 +35,10 @@ done
 # Reapply the exact production upgrade after loading a legacy phone-less row.
 psql_test < "$repo_root/supabase/migrations/202610260006_manual_booking_requirements.sql" > "$run_dir/manual-rerun.log" 2>&1 || { cat "$run_dir/manual-rerun.log"; exit 1; }
 psql_test -c "select calendar_test.ok((select to_jsonb(b)=s.booking from public.bookings b cross join manual_test.before_upgrade s where b.id='96000000-0000-0000-0000-000000000001'),'manual requirements upgrade is rerunnable and preserves existing phone-less appointments');"
+
+# Signup requirements can be reapplied without mutating retained account data.
+psql_test < "$repo_root/supabase/migrations/202610260007_signup_required_name.sql" > "$run_dir/signup-name-rerun.log" 2>&1 || { cat "$run_dir/signup-name-rerun.log"; exit 1; }
+psql_test -c "select test.ok((select to_jsonb(u)=s.account and to_jsonb(p)=s.profile from auth.users u join public.profiles p on p.user_id=u.id cross join signup_name_test.before_upgrade s where u.id='97000000-0000-0000-0000-000000000010'),'signup-name upgrade is rerunnable and preserves existing nameless legacy accounts');"
 
 # Two independent sessions race for the same slot. Hold the winning transaction open
 # so the other session genuinely contends instead of issuing a sequential request.

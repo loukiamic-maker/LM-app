@@ -1,15 +1,16 @@
+import { getLanguage } from '../i18n';
 const asset = name => `${import.meta.env.BASE_URL}tutorials/${name}`;
 
 export const tutorialGuides = {
   client: {
     id: 'client', route: 'guide-client', title: 'Οδηγός για πελάτες',
     description: 'Δείτε πώς βρίσκετε μια υπηρεσία και κλείνετε το ραντεβού σας στο Eneres',
-    video: asset('eneres-client-guide-el.mp4'), poster: asset('eneres-client-guide-el.jpg'), captions: asset('eneres-client-guide-el.vtt'),
+    get video() { return asset(`eneres-client-guide-${getLanguage()}.mp4`); }, get poster() { return asset(`eneres-client-guide-${getLanguage()}.jpg`); }, get captions() { return asset(`eneres-client-guide-${getLanguage()}.vtt`); },
     steps: [
       ['Βρείτε την υπηρεσία σας', 'Επιλέξτε την υπηρεσία από τα εικονίδια, την πόλη και την ημερομηνία που σας εξυπηρετεί'],
       ['Δείτε έναν χώρο', 'Ανοίξτε την καταχώριση και επιλέξτε την υπηρεσία σας'],
       ['Επιλέξτε ημέρα και ώρα', 'Διαλέξτε επαγγελματία και μία από τις διαθέσιμες ώρες'],
-      ['Συμπληρώστε τα στοιχεία σας', 'Στην εγγραφή δηλώστε κινητό με κωδικό χώρας και επιβεβαιώστε το email σας. Στην κράτηση ελέγξτε τα στοιχεία επικοινωνίας'],
+      ['Συμπληρώστε τα στοιχεία σας', 'Στην εγγραφή δηλώστε κινητό με κωδικό χώρας και επιβεβαιώστε το email σας. Οι κρατήσεις χρησιμοποιούν αυτόματα το κινητό του λογαριασμού σας. Για αλλαγή αριθμού ενημερώστε το προφίλ σας'],
       ['Επιβεβαιώστε την κράτηση', 'Ελέγξτε την τιμή και την πολιτική ακύρωσης. Η πληρωμή γίνεται στο κατάστημα'],
       ['Διαχειριστείτε τα ραντεβού σας', 'Από τα ραντεβού σας μπορείτε να δείτε τις κρατήσεις και να ζητήσετε αλλαγή ή ακύρωση μέσα στην επιτρεπόμενη προθεσμία'],
     ],
@@ -17,7 +18,7 @@ export const tutorialGuides = {
   business: {
     id: 'business', route: 'guide-business', title: 'Οδηγός για επιχειρήσεις',
     description: 'Δείτε το ημερολόγιο, τις ειδοποιήσεις και τη διαχείριση ραντεβού της επιχείρησής σας',
-    video: asset('eneres-business-guide-el.mp4'), poster: asset('eneres-business-guide-el.jpg'), captions: asset('eneres-business-guide-el.vtt'),
+    get video() { return asset(`eneres-business-guide-${getLanguage()}.mp4`); }, get poster() { return asset(`eneres-business-guide-${getLanguage()}.jpg`); }, get captions() { return asset(`eneres-business-guide-${getLanguage()}.vtt`); },
     steps: [
       ['Προσθέστε την επιχείρησή σας', 'Συμπληρώστε στοιχεία, πόλη και φωτογραφία. Προσθέστε υπηρεσίες, επαγγελματίες και ωράριο και στείλτε την επιχείρηση για έλεγχο'],
       ['Δείτε ολόκληρη την ημέρα', 'Το ημερολόγιο εμφανίζει τις ώρες και τα κενά διαστήματα. Οι κρατήσεις από το Eneres είναι πορτοκαλί και οι χειροκίνητες γαλάζιες'],

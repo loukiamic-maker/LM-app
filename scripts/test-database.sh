@@ -26,7 +26,22 @@ psql_test < "$repo_root/supabase/tests/bootstrap.sql" > "$run_dir/bootstrap.log"
 for migration in "$repo_root"/supabase/migrations/*.sql; do
   psql_test < "$migration" > "$run_dir/migration.log" 2>&1 || { cat "$run_dir/migration.log"; exit 1; }
 done
-for test_file in platform owner_calendar admin_billing photo_storage booking_alerts signup_phone signup_name manual_requirements; do
+# Exercise the actual copy/paste package and activation logic without providers,
+# accounts or network access, then restore the default policy for the fixtures.
+node "$repo_root/scripts/package-manual-booking-upgrade.mjs" "$run_dir" > "$run_dir/package.log" 2>&1
+psql_test < "$run_dir/eneres-account-booking-requirements.sql" > "$run_dir/package-check.log" 2>&1 || { cat "$run_dir/package-check.log"; exit 1; }
+psql_test < "$repo_root/supabase/operations/activate-phone-auth.sql" > "$run_dir/activation.log" 2>&1 || { cat "$run_dir/activation.log"; exit 1; }
+psql_test <<'SQL' > "$run_dir/activation-check.log" 2>&1
+do $assert$
+begin
+  if not (public.get_auth_requirements()->>'require_verified_phone')::boolean then
+    raise exception 'Phone policy activation did not take effect';
+  end if;
+end $assert$;
+update private.auth_settings set require_verified_booking_phone=false where singleton;
+SQL
+echo 'PASS: exact account/booking SQL package and phone-policy activation completed without external delivery.'
+for test_file in platform owner_calendar admin_billing photo_storage booking_alerts signup_phone signup_name manual_requirements phone_auth; do
   psql_test < "$repo_root/supabase/tests/$test_file.sql" > "$run_dir/$test_file.log" 2>&1 || { cat "$run_dir/$test_file.log"; exit 1; }
   # Show substantive outcomes without fixture PII or SQL chatter.
   rg 'NOTICE:  PASS:' "$run_dir/$test_file.log" || cat "$run_dir/$test_file.log"
@@ -39,6 +54,16 @@ psql_test -c "select calendar_test.ok((select to_jsonb(b)=s.booking from public.
 # Signup requirements can be reapplied without mutating retained account data.
 psql_test < "$repo_root/supabase/migrations/202610260007_signup_required_name.sql" > "$run_dir/signup-name-rerun.log" 2>&1 || { cat "$run_dir/signup-name-rerun.log"; exit 1; }
 psql_test -c "select test.ok((select to_jsonb(u)=s.account and to_jsonb(p)=s.profile from auth.users u join public.profiles p on p.user_id=u.id cross join signup_name_test.before_upgrade s where u.id='97000000-0000-0000-0000-000000000010'),'signup-name upgrade is rerunnable and preserves existing nameless legacy accounts');"
+
+# Reapply the newest Auth upgrade after the historical007 rerun above. The
+# migration must preserve the disabled rollout setting and all legacy accounts.
+psql_test < "$repo_root/supabase/migrations/202610260008_phone_auth.sql" > "$run_dir/phone-auth-rerun.log" 2>&1 || { cat "$run_dir/phone-auth-rerun.log"; exit 1; }
+psql_test -c "select test.ok((public.get_auth_requirements()->>'require_verified_phone')::boolean=false,'phone-auth upgrade is rerunnable without activating SMS requirements'); select test.ok((select to_jsonb(u)=s.account and to_jsonb(p)=s.profile from auth.users u join public.profiles p on p.user_id=u.id cross join signup_name_test.before_upgrade s where u.id='97000000-0000-0000-0000-000000000010'),'phone-auth upgrade preserves legacy nameless accounts and contacts');"
+
+# Reinstalling008 must also retain an intentional production activation.
+psql_test -c "update private.auth_settings set require_verified_booking_phone=true where singleton;" > "$run_dir/phone-auth-enable.log" 2>&1
+psql_test < "$repo_root/supabase/migrations/202610260008_phone_auth.sql" > "$run_dir/phone-auth-active-rerun.log" 2>&1 || { cat "$run_dir/phone-auth-active-rerun.log"; exit 1; }
+psql_test -c "select test.ok((public.get_auth_requirements()->>'require_verified_phone')::boolean=true,'phone-auth reinstall preserves intentional activation'); update private.auth_settings set require_verified_booking_phone=false where singleton;"
 
 # Two independent sessions race for the same slot. Hold the winning transaction open
 # so the other session genuinely contends instead of issuing a sequential request.

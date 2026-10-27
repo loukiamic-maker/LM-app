@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { createClient } from '@supabase/supabase-js';
 
 const runtime = typeof window !== 'undefined' ? window.MERAKI_CONFIG || {} : {};
@@ -39,7 +40,9 @@ export function platformError(error) {
   const code = error?.code || '';
   const message = error?.message || '';
   let userMessage = 'Η ενέργεια δεν ολοκληρώθηκε. Προσπαθήστε ξανά';
-  if (/PHONE_REQUIRED|PHONE_INVALID|CUSTOMER_PHONE/.test(message)) userMessage = 'Συμπληρώστε ένα έγκυρο κινητό τηλέφωνο';
+  if (/PHONE_VERIFICATION_REQUIRED|BOOKING_PHONE_MISMATCH/.test(message)) userMessage = 'Επιβεβαιώστε το κινητό σας από το προφίλ και δοκιμάστε ξανά';
+  else if (/SIGNUP_FULL_NAME_REQUIRED/.test(message)) userMessage = 'Συμπληρώστε το όνομά σας με 2 έως 80 χαρακτήρες';
+  else if (/PHONE_REQUIRED|PHONE_INVALID|CUSTOMER_PHONE/.test(message)) userMessage = 'Συμπληρώστε ένα έγκυρο κινητό τηλέφωνο';
   else if (/create_booking_with_contact/.test(message) && code === 'PGRST202') userMessage = 'Το σύστημα κρατήσεων χρειάζεται ενημέρωση από τη διαχείριση. Δοκιμάστε αργότερα';
   else if (/conflict|unavailable|overlap|23P01|slot_taken/i.test(`${code} ${message}`)) userMessage = 'Η ώρα δεν είναι πλέον διαθέσιμη. Επιλέξτε μια νέα ώρα';
   else if (/email.*confirm|confirm.*email|email_not_confirmed/i.test(message)) userMessage = 'Επιβεβαιώστε πρώτα το email σας από τον σύνδεσμο που λάβατε';
@@ -53,13 +56,13 @@ export function platformError(error) {
   else if (/hours|schedule|time.off|invalid.*time|outside|notice/i.test(message)) userMessage = 'Η ώρα δεν βρίσκεται στο διαθέσιμο ωράριο του καταστήματος';
   else if (/published|inactive|not found/i.test(message)) userMessage = 'Αυτή η υπηρεσία ή το κατάστημα δεν είναι διαθέσιμο για κράτηση';
   const result = new Error(message || userMessage);
-  result.userMessage = userMessage;
+  result.userMessage = t(userMessage);
   result.code = code;
   return result;
 }
 
 function client() {
-  if (!supabase) throw Object.assign(new Error('Backend not configured'), { userMessage: 'Η υπηρεσία κρατήσεων δεν έχει συνδεθεί ακόμα' });
+  if (!supabase) throw Object.assign(new Error('Backend not configured'), { userMessage: t('Η υπηρεσία κρατήσεων δεν έχει συνδεθεί ακόμα') });
   return supabase;
 }
 

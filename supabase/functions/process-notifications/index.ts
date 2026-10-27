@@ -28,7 +28,8 @@ export function emailContent(notification: Notification, forOwner: boolean) {
   const when = new Intl.DateTimeFormat('el-GR', {
     dateStyle: 'full', timeStyle: 'short', timeZone: p.timezone,
   }).format(new Date(p.starts_at));
-  const price = new Intl.NumberFormat('el-GR', { style: 'currency', currency: 'EUR' }).format(p.price_cents / 100);
+  const amount = p.price_cents / 100;
+  const price = `€${new Intl.NumberFormat('el-GR', { minimumFractionDigits: Number.isInteger(amount) ? 0 : 2, maximumFractionDigits: 2 }).format(amount)}`;
   const lines = [
     forOwner ? `Πελάτης: ${p.customer_name}` : `Γεια σας, ${p.customer_name}!`,
     notification.event_type === 'booking_cancelled' ? 'Το παρακάτω ραντεβού ακυρώθηκε.' :

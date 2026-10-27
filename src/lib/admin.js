@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { platformError, supabase } from './platform';
 
 const withoutStop = text => String(text || '').replace(/\.\s*$/, '');
@@ -5,17 +6,17 @@ const withoutStop = text => String(text || '').replace(/\.\s*$/, '');
 export function managementError(error) {
   const message = String(error?.message || error?.code || '');
   let userMessage;
-  if (/ADMIN_REQUIRED|ADMIN_ONLY|ADMIN_FORBIDDEN/.test(message)) userMessage = 'Ο λογαριασμός δεν έχει δικαιώματα διαχείρισης';
-  else if (/PGRST202|Could not find the function|does not exist|schema cache/i.test(message)) userMessage = 'Η ενημέρωση διαχείρισης δεν έχει εγκατασταθεί ακόμη στη βάση';
-  else if (/SALON_SETUP_INCOMPLETE/.test(message)) userMessage = 'Συμπληρώστε ενεργές υπηρεσίες, επαγγελματίες και ωράριο πριν από την έγκριση';
-  else if (/BILLING_PRICE|PRICE_REQUIRED|BILLING_NOT_CONFIGURED/.test(message)) userMessage = 'Ορίστε πρώτα τη μηνιαία τιμή συνδρομής';
-  else if (/BILLING_ALREADY_ACTIVE/.test(message)) userMessage = 'Υπάρχει ήδη ενεργή συνδρομή για την επιχείρηση';
-  else if (/BILLING_CHECKOUT_IN_PROGRESS/.test(message)) userMessage = 'Μια προσπάθεια ενεργοποίησης βρίσκεται ήδη σε εξέλιξη — περιμένετε λίγο και ανανεώστε';
-  else if (/BILLING_PERIOD_ALREADY_PAID/.test(message)) userMessage = 'Η τρέχουσα περίοδος έχει ήδη εξοφληθεί — μπορείτε να ενεργοποιήσετε την πληρωμή με κάρτα μετά τη λήξη της';
-  else if (/BILLING_UPDATE_PENDING/.test(message)) userMessage = 'Η ενημέρωση της συνδρομής βρίσκεται σε εξέλιξη — ανανεώστε τα στοιχεία σε λίγο';
-  else if (/PAYMENT_NOT_CONFIGURED|STRIPE_NOT_CONFIGURED/.test(message)) userMessage = 'Η πληρωμή με κάρτα δεν είναι διαθέσιμη ακόμη';
-  else if (/CHARGE_ALREADY|CHARGE_NOT_PENDING/.test(message)) userMessage = 'Η χρέωση έχει ήδη ενημερωθεί — ανανεώστε τα στοιχεία';
-  else if (/PERIOD|DUE_DATE|AMOUNT_INVALID|PRICE_INVALID/.test(message)) userMessage = 'Ελέγξτε την περίοδο, την ημερομηνία και το ποσό της χρέωσης';
+  if (/ADMIN_REQUIRED|ADMIN_ONLY|ADMIN_FORBIDDEN/.test(message)) userMessage = t('Ο λογαριασμός δεν έχει δικαιώματα διαχείρισης');
+  else if (/PGRST202|Could not find the function|does not exist|schema cache/i.test(message)) userMessage = t('Η ενημέρωση διαχείρισης δεν έχει εγκατασταθεί ακόμη στη βάση');
+  else if (/SALON_SETUP_INCOMPLETE/.test(message)) userMessage = t('Συμπληρώστε ενεργές υπηρεσίες, επαγγελματίες και ωράριο πριν από την έγκριση');
+  else if (/BILLING_PRICE|PRICE_REQUIRED|BILLING_NOT_CONFIGURED/.test(message)) userMessage = t('Ορίστε πρώτα τη μηνιαία τιμή συνδρομής');
+  else if (/BILLING_ALREADY_ACTIVE/.test(message)) userMessage = t('Υπάρχει ήδη ενεργή συνδρομή για την επιχείρηση');
+  else if (/BILLING_CHECKOUT_IN_PROGRESS/.test(message)) userMessage = t('Μια προσπάθεια ενεργοποίησης βρίσκεται ήδη σε εξέλιξη — περιμένετε λίγο και ανανεώστε');
+  else if (/BILLING_PERIOD_ALREADY_PAID/.test(message)) userMessage = t('Η τρέχουσα περίοδος έχει ήδη εξοφληθεί — μπορείτε να ενεργοποιήσετε την πληρωμή με κάρτα μετά τη λήξη της');
+  else if (/BILLING_UPDATE_PENDING/.test(message)) userMessage = t('Η ενημέρωση της συνδρομής βρίσκεται σε εξέλιξη — ανανεώστε τα στοιχεία σε λίγο');
+  else if (/PAYMENT_NOT_CONFIGURED|STRIPE_NOT_CONFIGURED/.test(message)) userMessage = t('Η πληρωμή με κάρτα δεν είναι διαθέσιμη ακόμη');
+  else if (/CHARGE_ALREADY|CHARGE_NOT_PENDING/.test(message)) userMessage = t('Η χρέωση έχει ήδη ενημερωθεί — ανανεώστε τα στοιχεία');
+  else if (/PERIOD|DUE_DATE|AMOUNT_INVALID|PRICE_INVALID/.test(message)) userMessage = t('Ελέγξτε την περίοδο, την ημερομηνία και το ποσό της χρέωσης');
   else userMessage = withoutStop(error?.userMessage || platformError(error).userMessage);
   return Object.assign(new Error(message || userMessage), { code: error?.code, userMessage });
 }
@@ -64,6 +65,6 @@ export async function startSubscriptionCheckout(salonId, requestId, action = 'su
     if (url.protocol !== 'https:' || url.username || url.password || !['checkout.stripe.com', 'billing.stripe.com'].includes(url.hostname)) throw new Error();
     return { ...data, url: url.toString() };
   } catch {
-    throw Object.assign(new Error('Invalid hosted checkout address'), { userMessage: 'Ο σύνδεσμος πληρωμής δεν είναι διαθέσιμος — προσπαθήστε ξανά' });
+    throw Object.assign(new Error('Invalid hosted checkout address'), { userMessage: t('Ο σύνδεσμος πληρωμής δεν είναι διαθέσιμος — προσπαθήστε ξανά') });
   }
 }

@@ -4,8 +4,8 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const directory = resolve(process.argv[2] || '/workspace/artifacts');
-const migration = ['202610260006_manual_booking_requirements.sql', '202610260007_signup_required_name.sql']
-  .map(name => readFileSync(resolve(root, 'supabase/migrations', name), 'utf8')).join('\n\n');
+const migration = ['202610260006_manual_booking_requirements.sql', '202610260007_signup_required_name.sql', '202610260008_phone_auth.sql']
+  .map(name => readFileSync(resolve(root, 'supabase/migrations', name), 'utf8').replace(/^begin;\s*$/gm, '').replace(/^commit;\s*$/gm, '')).join('\n\n');
 const checks = `
 -- Read-only installation checks. These do not create appointments or change data.
 select 'Required manual booking fields' as check_name,
@@ -33,10 +33,15 @@ select 'Required signup name and phone',
  then 'PASS' else 'CHECK NEEDED' end,
  'New email registrations require a name and country-coded mobile; existing accounts stay unchanged'
 union all
+select 'Phone login activation',
+ case when (public.get_auth_requirements()->>'require_verified_phone')::boolean then 'ACTIVE' else 'PROVIDER SETUP REQUIRED' end,
+ 'SMS login and verified-phone booking enforcement activate only after the private provider setup and activation SQL'
+union all
+select 'Appointment email delivery','SEPARATE SETUP','Configure the email sender, deploy process-notifications and schedule its private worker before live messages can be sent'
+union all
 select 'Existing appointments','PRESERVED','This upgrade only replaces validation logic and does not rewrite existing appointments';
 `;
 mkdirSync(directory, { recursive: true });
 const output = resolve(directory, 'eneres-account-booking-requirements.sql');
-writeFileSync(output, `${migration}
-${checks}`);
+writeFileSync(output, `-- Eneres account and booking setup: migrations 006–008, applied atomically\n-- Phone login remains off until private SMS and email delivery are configured\nbegin;\n${migration}\ncommit;\n${checks}`);
 console.log(`Created ${output}`);

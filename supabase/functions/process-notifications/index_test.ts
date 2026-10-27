@@ -46,7 +46,9 @@ Deno.test('email rendering escapes user text and shows Greek pay-at-salon detail
   const content=emailContent(notification,false);
   assert(!content.html.includes('<script>'),'HTML injection must be escaped');
   assert(content.html.includes('&lt;script&gt;'),'Escaped customer name must be preserved');
-  assert(content.text.includes('35,00'),'Amount must use euro cents and Greek formatting');
+  assert(content.text.includes('Τιμή: €35'),'Whole euro amounts must use the prefix sign without a space');
+  assert(emailContent({...notification,payload:{...notification.payload,price_cents:3550}},false).text.includes('Τιμή: €35,50'),'Euro cents must retain two Greek decimal digits after the prefix sign');
+  assert(emailContent({...notification,payload:{...notification.payload,price_cents:125050}},false).text.includes('Τιμή: €1.250,50'),'Large prices must retain Greek grouping and cents');
   assert(content.text.includes('Δεν έχει γίνει ηλεκτρονική χρέωση'),'Must explain venue payment');
   assert(content.text.includes('12:00'),'Appointment must render in Athens timezone');
 });
@@ -157,4 +159,61 @@ Deno.test('business notices include private contact and customer cancellation no
   const cancellation = emailContent({ ...detailed, event_type: 'booking_cancelled' }, false);
   assert(cancellation.text.includes('owner explanation'), 'Customer receives cancellation explanation');
   assert(!cancellation.html.includes('<owner explanation>'), 'Cancellation explanation is HTML escaped');
+});
+
+Deno.test('confirmation and business cancellation are delivered to the queued customer address with Greek details',async () => {
+  const restore=setupEnv(); const originalFetch=globalThis.fetch;
+  const cancellation = { ...notification, id: '60000000-0000-0000-0000-000000000002', event_type: 'booking_cancelled' as const, payload: { ...notification.payload, cancellation_note: 'Απουσία επαγγελματία — παρακαλώ επιλέξτε νέα ώρα', price_cents:3550 } };
+  const sends:Record<string,unknown>[]=[]; const acknowledgments:Record<string,unknown>[]=[];
+  globalThis.fetch=(async (input:RequestInfo|URL,init?:RequestInit) => {
+    const url=String(input); const body=JSON.parse(String(init?.body));
+    if(url.endsWith('/enqueue_due_reminders')) return Response.json(0);
+    if(url.endsWith('/claim_notifications')) return Response.json([notification,cancellation]);
+    if(url==='https://api.resend.com/emails') { sends.push(body); return Response.json({id:`mock-message-${sends.length}`}); }
+    if(url.endsWith('/ack_notification')) { acknowledgments.push(body); return new Response(null,{status:204}); }
+    throw new Error('Unexpected endpoint');
+  }) as typeof fetch;
+  try {
+    const response=await handleRequest(request()); const result=await response.json();
+    assert(result.delivered===2&&result.failed===0,'Both confirmation and cancellation events must be delivered');
+    const customerMessages=sends.filter(send=>JSON.stringify(send.to)===JSON.stringify([notification.recipient_email]));
+    const ownerMessages=sends.filter(send=>JSON.stringify(send.to)===JSON.stringify([notification.payload.owner_email]));
+    assert(customerMessages.length===2&&ownerMessages.length===2,'Each event sends isolated customer and owner messages');
+    assert(customerMessages[0].subject==='Επιβεβαίωση ραντεβού · Example Salon','Customer confirmation has the Greek confirmation subject');
+    assert(customerMessages[1].subject==='Ακύρωση ραντεβού · Example Salon','Customer cancellation has the Greek cancellation subject');
+    assert(String(customerMessages[0].text).includes('Το ραντεβού σας επιβεβαιώθηκε')&&String(customerMessages[0].text).includes('12:00'),'Confirmation identifies the successful appointment in salon local time');
+    assert(String(customerMessages[1].text).includes('Το παρακάτω ραντεβού ακυρώθηκε')&&String(customerMessages[1].text).includes(cancellation.payload.cancellation_note),'Customer cancellation contains the business explanation');
+    assert(String(customerMessages[1].text).includes('Τιμή: €35,50'),'Cancellation keeps the actual booked service amount');
+    assert(customerMessages.every(send=>!('cc' in send)&&!('bcc' in send)),'Business recipients are never exposed through customer cc/bcc');
+    assert(acknowledgments.length===2&&acknowledgments.every(ack=>ack.p_delivered===true),'Every event is acknowledged after both private deliveries');
+  } finally { globalThis.fetch=originalFetch; restore(); }
+});
+
+Deno.test('retry after the owner send fails reuses the accepted customer idempotency key',async () => {
+  const restore=setupEnv(); const originalFetch=globalThis.fetch;
+  const attempts:string[]=[]; const accepted=new Set<string>(); const acknowledgments:Record<string,unknown>[]=[];
+  const customerKey=`booking-event-${notification.id}-customer`; const ownerKey=`booking-event-${notification.id}-owner`;
+  let ownerRejected=false;
+  globalThis.fetch=(async (input:RequestInfo|URL,init?:RequestInit) => {
+    const url=String(input); const body=JSON.parse(String(init?.body));
+    if(url.endsWith('/enqueue_due_reminders')) return Response.json(0);
+    if(url.endsWith('/claim_notifications')) return Response.json([notification]);
+    if(url==='https://api.resend.com/emails') {
+      const key=new Headers(init?.headers).get('Idempotency-Key')||''; attempts.push(key);
+      if(key===ownerKey&&!ownerRejected) { ownerRejected=true; return new Response('mock quota response',{status:429}); }
+      accepted.add(key);
+      return Response.json({id:`accepted-${key}`});
+    }
+    if(url.endsWith('/ack_notification')) { acknowledgments.push(body); return new Response(null,{status:204}); }
+    throw new Error('Unexpected endpoint');
+  }) as typeof fetch;
+  try {
+    const first=await (await handleRequest(request())).json();
+    assert(first.failed===1&&first.delivered===0,'A failed owner send keeps the event retryable');
+    const second=await (await handleRequest(request())).json();
+    assert(second.failed===0&&second.delivered===1,'The retry completes the remaining owner delivery');
+    assert(attempts.join(',')===[customerKey,ownerKey,customerKey,ownerKey].join(','),'The retry uses the same stable per-recipient keys');
+    assert(accepted.size===2&&accepted.has(customerKey)&&accepted.has(ownerKey),'Provider idempotency can retain one accepted message per event recipient');
+    assert(acknowledgments[0].p_delivered===false&&acknowledgments[0].p_error==='EMAIL_PROVIDER_429'&&acknowledgments[1].p_delivered===true,'Only a fully accepted event receives a delivered acknowledgment');
+  } finally { globalThis.fetch=originalFetch; restore(); }
 });

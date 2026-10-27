@@ -42,7 +42,8 @@ function session() {
 }
 
 async function mockPlatform(page, options = {}) {
-  const state = { calls: [], unexpected: [], bookings: [], owners: [], alerts: [], profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '' }, failCreate: false, holdCreate: false, createPending: false, releaseCreate: null, ...options };
+  await page.addInitScript(() => localStorage.setItem('eneres-language', 'el'));
+  const state = { calls: [], unexpected: [], bookings: [], owners: [], alerts: [], profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '+306900000000' }, failProfile: false, failCreate: false, holdCreate: false, createPending: false, releaseCreate: null, ...options };
   await page.route('**/platform-config.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.MERAKI_CONFIG=${JSON.stringify({ supabaseUrl: HOST, supabasePublishableKey: 'sb_publishable_test_key' })};` }));
   await page.route(`${HOST}/**`, async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname;
@@ -52,10 +53,12 @@ async function mockPlatform(page, options = {}) {
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE' } });
     if (path === '/auth/v1/signup') return send({ user: { ...account, email_confirmed_at: null, confirmed_at: null }, session: null });
     if (path === '/auth/v1/token') return send(session());
+    if (path === '/rest/v1/rpc/get_auth_requirements') return send({ require_verified_phone: Boolean(state.requireVerifiedPhone) });
     if (path === '/auth/v1/user') return send(account);
     if (path === '/auth/v1/logout') return send({});
     if (path === '/rest/v1/profiles') {
       if (request.method() === 'GET') return send([state.profile]);
+      if (state.failProfile) return send({ code: '42501', message: 'Profile update rejected' }, 403);
       Object.assign(state.profile, body); return send(null);
     }
     if (path === '/rest/v1/salons') {
@@ -129,17 +132,17 @@ async function login(page, alreadyOpen = false) {
   await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού' }).click();
 }
 
-async function checkout(page, { fillContact = true } = {}) {
+async function checkout(page, { hour = 10, date = futureDate() } = {}) {
   const dialog = page.locator('.booking-live');
   await dialog.getByRole('button', { name: /Κούρεμα από κατάλογο/ }).click();
   await dialog.getByRole('button', { name: 'Συνέχεια', exact: true }).click();
   await dialog.getByRole('button', { name: /Επαγγελματίας Διακομιστή/ }).click();
-  await dialog.getByLabel('Ημερομηνία ραντεβού').fill(futureDate());
-  await dialog.getByRole('button', { name: '10:00 · Επαγγελματίας Διακομιστή', exact: true }).click();
+  await dialog.getByLabel('Ημερομηνία ραντεβού').fill(date);
+  await dialog.getByRole('button', { name: `${hour}:00 · Επαγγελματίας Διακομιστή`, exact: true }).click();
   await dialog.getByRole('button', { name: 'Συνέχεια στην επιβεβαίωση' }).click();
   await expect(dialog.getByText('Πληρωμή στο κατάστημα', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toBeDisabled();
-  if (fillContact) await dialog.getByLabel('Αριθμός κινητού', { exact: true }).fill('+306900000000');
+  await expect(dialog.locator('input[type=tel]')).toHaveCount(0);
   await dialog.getByRole('checkbox').check();
   return dialog;
 }
@@ -304,6 +307,7 @@ test('business creates a server-side draft and clears private forms when another
 });
 
 test('invalid platform configuration fails closed instead of falling back to example businesses', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('eneres-language', 'el'));
   const requests = [];
   await page.route('**/platform-config.js', route => route.fulfill({ contentType: 'application/javascript', body: `window.MERAKI_CONFIG=${JSON.stringify({ supabaseUrl: 'http://invalid-backend.example', supabasePublishableKey: 'sb_secret_forbidden_in_browser' })};` }));
   await page.route('https://*.supabase.co/**', route => { requests.push(route.request().url()); return route.abort(); });
@@ -368,21 +372,16 @@ test('an offline reservation removes a selected consumer slot when the checkout 
   expect(state.unexpected).toEqual([]);
 });
 
-test('consumer must provide a mobile number and customer notes reach the server booking', async ({ page }) => {
+test('consumer booking automatically uses the saved account phone and sends customer notes without phone entry', async ({ page }) => {
   const state = await mockPlatform(page);
   await page.goto('/'); await login(page);
   await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
-  const dialog = await checkout(page, { fillContact: false });
+  const dialog = await checkout(page);
   const confirm = dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ });
-  await expect(dialog.getByLabel('Αριθμός κινητού', { exact: true })).toHaveAttribute('required', '');
-  await confirm.click();
-  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
-  await dialog.getByLabel('Αριθμός κινητού', { exact: true }).fill('+30123');
-  await confirm.click();
-  await expect(dialog.getByRole('alert')).toContainText('έγκυρο κινητό');
-  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
-  await dialog.getByLabel('Αριθμός κινητού', { exact: true }).fill('+306900000000');
-  await dialog.getByLabel('Σημειώσεις για την επιχείρηση (προαιρετικό)', { exact: true }).fill('Παρακαλώ καλέστε με πριν το ραντεβού');
+  await expect(dialog.getByText('+306900000000', { exact: true })).toBeVisible();
+  await expect(dialog.locator('input[type=tel]')).toHaveCount(0);
+  await expect(dialog.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true })).toHaveCount(0);
+  await dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true }).fill('Παρακαλώ καλέστε με πριν το ραντεβού');
   await expect(confirm).toBeEnabled();
   await confirm.click();
   await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
@@ -390,6 +389,35 @@ test('consumer must provide a mobile number and customer notes reach the server 
     p_customer_phone: '+306900000000', p_notes: 'Παρακαλώ καλέστε με πριν το ραντεβού',
   });
   expect(state.bookings[0]).toMatchObject({ customer_phone: '+306900000000', notes: 'Παρακαλώ καλέστε με πριν το ραντεβού', booking_source: 'online' });
+  expect(state.unexpected).toEqual([]);
+});
+
+test('a legacy account adds its missing phone once in settings and returns to the selected appointment', async ({ page }) => {
+  const state = await mockPlatform(page, { profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '' } });
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  const confirm = dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ });
+  const note = 'Η σημείωση και η ώρα διατηρούνται';
+  await dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true }).fill(note);
+  await expect(confirm).toBeDisabled();
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
+  await dialog.getByRole('button', { name: 'Αλλαγή στο προφίλ', exact: true }).click();
+  const panel = page.locator('.account-panel');
+  await expect(panel.getByRole('heading', { name: 'Το προφίλ σας', exact: true })).toBeVisible();
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('99000000');
+  await panel.getByRole('button', { name: 'Αποθήκευση προφίλ', exact: true }).click();
+  await expect(panel.getByRole('status')).toContainText('Το προφίλ σας ενημερώθηκε');
+  await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού', exact: true }).click();
+  await expect(dialog.getByText('+35799000000', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true })).toHaveValue(note);
+  await expect(dialog.locator('.booking-summary-card')).toContainText('10:00');
+  await expect(dialog.getByRole('checkbox')).toBeChecked();
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
+  expect(state.calls.find(call => call.path.endsWith('/create_booking_with_contact')).body).toMatchObject({ p_customer_phone: '+35799000000', p_starts_at: localInstant(futureDate()), p_service_id: ids.service, p_staff_id: ids.staff, p_notes: note });
+  expect(state.profile.mobile_phone).toBe('+35799000000');
   expect(state.unexpected).toEqual([]);
 });
 
@@ -428,10 +456,15 @@ test('signup requires a name and valid mobile number and sends the chosen countr
   expect(state.unexpected).toEqual([]);
 });
 
-test('a saved mobile profile persists a changed country code and autofills the booking contact field', async ({ page }) => {
+test('changing the saved phone through checkout settings preserves the appointment and applies to later bookings', async ({ page }) => {
   const state = await mockPlatform(page, { profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '+35799000000' } });
   await page.goto('/'); await login(page);
-  await page.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  await expect(dialog.getByText('+35799000000', { exact: true })).toBeVisible();
+  const note = 'Κρατήστε την επιλεγμένη ώρα';
+  await dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true }).fill(note);
+  await dialog.getByRole('button', { name: 'Αλλαγή στο προφίλ', exact: true }).click();
   const panel = page.locator('.account-panel');
   await expect(panel.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true })).toHaveValue('CY');
   await expect(panel.getByLabel('Αριθμός κινητού', { exact: true })).toHaveValue('99000000');
@@ -441,14 +474,49 @@ test('a saved mobile profile persists a changed country code and autofills the b
   await expect(panel.getByRole('status')).toContainText('Το προφίλ σας ενημερώθηκε');
   expect(state.calls.find(call => call.path === '/rest/v1/profiles' && call.method === 'POST').body).toMatchObject({ mobile_phone: '+306900000000' });
   await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού', exact: true }).click();
-  await page.reload();
-  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
-  const dialog = await checkout(page, { fillContact: false });
-  await expect(dialog.getByRole('combobox', { name: 'Κωδικός χώρας', exact: true })).toHaveValue('GR');
-  await expect(dialog.getByLabel('Αριθμός κινητού', { exact: true })).toHaveValue('6900000000');
+  await expect(dialog.getByText('+306900000000', { exact: true })).toBeVisible();
+  await expect(dialog.locator('input[type=tel]')).toHaveCount(0);
+  await expect(dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true })).toHaveValue(note);
+  await expect(dialog.locator('.booking-summary-card')).toContainText('10:00');
+  await expect(dialog.getByRole('checkbox')).toBeChecked();
   await dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ }).click();
   await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
-  expect(state.calls.find(call => call.path.endsWith('/create_booking_with_contact')).body).toMatchObject({ p_customer_phone: '+306900000000' });
+  expect(state.calls.find(call => call.path.endsWith('/create_booking_with_contact')).body).toMatchObject({ p_customer_phone: '+306900000000', p_starts_at: localInstant(futureDate()), p_notes: note });
+  await dialog.getByRole('button', { name: 'Ολοκλήρωση', exact: true }).click();
+  await page.reload();
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const later = await checkout(page, { hour: 12, date: futureDate(8) });
+  await expect(later.getByText('+306900000000', { exact: true })).toBeVisible();
+  await later.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ }).click();
+  await expect(later.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
+  const bookings = state.calls.filter(call => call.path.endsWith('/create_booking_with_contact'));
+  expect(bookings).toHaveLength(2);
+  expect(bookings[1].body).toMatchObject({ p_customer_phone: '+306900000000', p_starts_at: localInstant(futureDate(8), 12) });
+  expect(state.unexpected).toEqual([]);
+});
+
+test('failed and unsaved profile phone changes never replace the saved phone used by checkout', async ({ page }) => {
+  const state = await mockPlatform(page, { failProfile: true, profile: { user_id: ids.user, full_name: 'Ελένη Δοκιμή', mobile_phone: '+35799000000' } });
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  await dialog.getByRole('button', { name: 'Αλλαγή στο προφίλ', exact: true }).click();
+  const panel = page.locator('.account-panel');
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('99112233');
+  await panel.getByRole('button', { name: 'Αποθήκευση προφίλ', exact: true }).click();
+  await expect(panel.getByRole('alert')).toBeVisible();
+  expect(state.profile.mobile_phone).toBe('+35799000000');
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await expect(dialog.getByText('+35799000000', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('+35799112233', { exact: true })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Αλλαγή στο προφίλ', exact: true }).click();
+  await panel.getByLabel('Αριθμός κινητού', { exact: true }).fill('99445566');
+  await panel.getByRole('button', { name: 'Κλείσιμο λογαριασμού', exact: true }).click();
+  await expect(dialog.getByText('+35799000000', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ }).click();
+  await expect(dialog.getByRole('heading', { name: /Το ραντεβού σας.*επιβεβαιώθηκε/ })).toBeVisible();
+  expect(state.calls.find(call => call.path.endsWith('/create_booking_with_contact')).body).toMatchObject({ p_customer_phone: '+35799000000' });
   expect(state.unexpected).toEqual([]);
 });
 
@@ -457,7 +525,7 @@ test('private booking contact details close when another browser tab signs the a
   await page.goto('/'); await login(page);
   await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
   const dialog = await checkout(page);
-  await dialog.getByLabel('Σημειώσεις για την επιχείρηση (προαιρετικό)', { exact: true }).fill('Ιδιωτική σημείωση του πρώτου λογαριασμού');
+  await dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true }).fill('Ιδιωτική σημείωση του πρώτου λογαριασμού');
   const otherTab = await page.context().newPage();
   try {
     await mockPlatform(otherTab);
@@ -469,4 +537,43 @@ test('private booking contact details close when another browser tab signs the a
     await expect(dialog).toHaveCount(0);
     await expect(page.getByText('Ιδιωτική σημείωση του πρώτου λογαριασμού', { exact: true })).toHaveCount(0);
   } finally { await otherTab.close(); }
+});
+
+test('signing out through checkout settings closes private appointment details and releases the page scroll lock', async ({ page }) => {
+  const state = await mockPlatform(page);
+  await page.goto('/'); await login(page);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  const note = 'Ιδιωτική σημείωση πριν από αποσύνδεση';
+  await dialog.getByRole('textbox', { name: 'Σημειώσεις για την επιχείρηση (προαιρετικό)', exact: true }).fill(note);
+  await dialog.getByRole('button', { name: 'Αλλαγή στο προφίλ', exact: true }).click();
+  const panel = page.locator('.account-panel');
+  await panel.getByRole('button', { name: 'Αποσύνδεση', exact: true }).click();
+  await expect(panel).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText(note, { exact: true })).toHaveCount(0);
+  await expect(page.getByText('+306900000000', { exact: true })).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  expect(state.calls.some(call => call.path.endsWith('/auth/v1/logout'))).toBe(true);
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
+  expect(state.unexpected).toEqual([]);
+});
+
+
+test('an email-confirmed customer must verify SMS in profile before booking when the phone policy is active', async ({ page }) => {
+  const state = await mockPlatform(page, { requireVerifiedPhone: true });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Το προφίλ μου', exact: true }).click();
+  await page.locator('.account-panel').getByRole('button', { name: 'Σύνδεση με email για υπάρχοντα λογαριασμό', exact: true }).click();
+  await login(page, true);
+  await page.getByRole('button', { name: `Δείτε υπηρεσίες στο ${publicSalon.name}` }).click();
+  const dialog = await checkout(page);
+  await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toBeDisabled();
+  await expect(dialog.getByText('Επιβεβαιώστε το κινητό σας με SMS από το προφίλ πριν από την κράτηση', { exact: true })).toBeVisible();
+  expect(state.calls.some(call => call.path.endsWith('/create_booking_with_contact'))).toBe(false);
+  await dialog.getByRole('button', { name: 'Αλλαγή στο προφίλ', exact: true }).click();
+  await expect(page.locator('.account-panel').getByRole('button', { name: 'Επιβεβαίωση κινητού με SMS', exact: true })).toBeVisible();
+  await page.locator('.account-panel').getByRole('button', { name: 'Κλείσιμο λογαριασμού', exact: true }).click();
+  await expect(dialog.getByRole('button', { name: /Επιβεβαίωση ραντεβού/ })).toBeDisabled();
+  expect(state.unexpected).toEqual([]);
 });

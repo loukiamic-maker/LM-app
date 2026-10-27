@@ -38,6 +38,7 @@ function session(user) {
   return { access_token: token, refresh_token: 'isolated-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, user };
 }
 async function mockOperations(page, options = {}) {
+  await page.addInitScript(() => localStorage.setItem('eneres-language', 'el'));
   const state = {
     calls: [], unexpected: [], user: actor(options.admin), ownedSalons: options.noSalon ? [] : [structuredClone(salon)],
     bookings: [], alerts: [], failManual: false, pending: [{ ...structuredClone(salon), status: 'pending', owner_email: 'owner@example.test' }],
@@ -61,6 +62,7 @@ async function mockOperations(page, options = {}) {
     }
     if (path === '/storage/v1/object/salon-photos' && request.method() === 'DELETE') { state.removals.push(...body.prefixes); return send(body.prefixes.map(name => ({ name }))); }
     if (path === '/auth/v1/token') return send(session(state.user));
+    if (path === '/rest/v1/rpc/get_auth_requirements') return send({ require_verified_phone: false });
     if (path === '/auth/v1/user') return send(state.user);
     if (path === '/auth/v1/logout') return send({});
     if (path === '/rest/v1/profiles') return send([{ user_id: ids.user, full_name: state.user.user_metadata.full_name }]);

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('eneres-language', 'el'));
   // Demo regression checks must never contact the deployed production project.
   await page.route('**/platform-config.js', route => route.fulfill({
     contentType: 'application/javascript',

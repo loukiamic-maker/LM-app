@@ -1,0 +1,6 @@
+.language-selector{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;color:#625a50}.language-selector select{appearance:auto;background:#fcfaf7;border:1px solid #ddd3c6;border-radius:7px;color:inherit;font-size:14px;line-height:1.4;max-width:118px;padding:7px 5px;cursor:pointer}.language-selector select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}@media(max-width:700px){.language-selector{gap:3px}.language-selector select{font-size:14px;max-width:108px;padding:7px 3px}.header-actions:has(.language-selector){gap:10px}}
+
+.account-language{display:flex;justify-content:flex-end;margin:0 30px 12px 0}.account-language .language-selector{color:#625a50}@media(max-width:700px){#root .evg-header>span{display:none}#root .evg-header{gap:8px;flex-wrap:wrap}}
+@media(max-width:700px){#root .appointments-page>.section-title{flex-wrap:wrap;align-items:flex-start;gap:12px}#root .appointments-page>.section-title>div{min-width:0;flex:1 1 100%}#root .appointments-page>.section-title>.text-link{max-width:100%;flex-wrap:wrap}#root .appointments-page .appointment-price{min-width:0;max-width:100%}}
+
+.configuration-language{display:flex;justify-content:flex-end;margin-bottom:20px}

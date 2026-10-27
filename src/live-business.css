@@ -41,3 +41,14 @@
   .lb-stats>div{min-width:0;flex-direction:column;align-items:flex-start;gap:5px}
   .lb-stats strong{max-width:100%;font-size:clamp(16px,5vw,21px);overflow-wrap:anywhere}
 }
+/* Keep the language choice on the first header row on narrow phones. */
+@media(max-width:380px){
+ .lb-topbar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px}
+ .lb-topbar>.lb-back{grid-column:1;grid-row:1;max-width:82px;min-width:0}
+ .lb-topbar>.brand{grid-column:2;grid-row:1;justify-self:center}
+ .lb-topbar>.lb-top-actions{display:contents}
+ .lb-top-actions>.language-selector{grid-column:3;grid-row:1;justify-self:end}
+ .lb-top-actions>.language-selector>svg{display:none}
+ .lb-top-actions>.lb-help-link{grid-column:2;grid-row:2;justify-self:end}
+ .lb-top-actions>.bn-bell{grid-column:3;grid-row:2;justify-self:start}
+}

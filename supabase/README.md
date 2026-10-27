@@ -3,11 +3,12 @@
 For a **new project**, apply the migrations in order: `202610240001_booking_platform.sql`,
 `202610240002_owner_calendar.sql`, `202610240003_admin_billing.sql`, then
 `202610250004_salon_photos.sql`, then `202610250005_booking_alerts.sql`, then
-`202610260006_manual_booking_requirements.sql`, then `202610260007_signup_required_name.sql`, using
+`202610260006_manual_booking_requirements.sql`, then `202610260007_signup_required_name.sql`, then
+`202610260008_phone_auth.sql`, using
 `supabase db push` after linking the project or the privileged SQL Editor.
-For an **existing project with the original booking tables**, apply missing upgrades in order: **002, 003, 004, 005, 006, 007**.
-If the administration/calendar upgrade is already installed, apply **004–007** for photo uploads and subsequent booking updates.
-If photo uploads are already installed, apply **005–007** for signup mobiles, booking alerts and required manual appointment details.
+For an **existing project with the original booking tables**, apply missing upgrades in order: **002, 003, 004, 005, 006, 007, 008**.
+If the administration/calendar upgrade is already installed, apply **004–008** for photo uploads and subsequent booking updates.
+If photo uploads are already installed, apply **005–008** for signup mobiles, booking alerts and required manual appointment details.
 Never rerun 001, delete tables, or reset the project to install these additions.
 The additive upgrades can be reapplied. Production migrations do not create
 sample businesses or accounts.
@@ -229,4 +230,8 @@ Apply `migrations/202610260006_manual_booking_requirements.sql` after the earlie
 
 New and edited manual appointments require a client name, phone, active service, explicit price, active professional and appointment date/time. Phone formatting is normalized to an optional leading plus and 8–15 digits; an explicit zero price remains valid. The shared staff-calendar exclusion constraint continues to prevent overlaps between online and manual appointments, including concurrent requests. Different professionals can work simultaneously, and adjacent appointments are allowed.
 
-Apply `migrations/202610260007_signup_required_name.sql` to require a name of 2–80 characters alongside the international phone for new email registrations and first-email transitions. Existing email accounts are preserved. The combined account and booking SQL package generated above includes both 006 and 007.
+Apply `migrations/202610260007_signup_required_name.sql` to require a name of 2–80 characters alongside the international phone for new email registrations and first-email transitions. Existing email accounts are preserved. The combined account and booking SQL package generated above includes 006–008.
+
+## Phone login and email verification
+
+Migration `202610260008_phone_auth.sql` stages phone OTP authentication without activating it. `get_auth_requirements()` exposes only the boolean policy; private settings stay inaccessible to browsers. Once SMS and email delivery have been configured, the privileged activation SQL enables verified-phone enforcement. New online bookings derive their contact from confirmed Auth and profile identities; editable metadata cannot claim SMS verification. Manual owner-entered appointments and historical calendar cancellations/reschedules remain supported. See [the activation guide](../docs/phone-login-and-email.md), which also covers account SMTP and the appointment notification worker.

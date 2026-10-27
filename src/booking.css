@@ -44,3 +44,16 @@
 @keyframes bkSpin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.booking-live-fields input{font-size:16px}.booking-live-calendar-nav>label>span{display:none}.booking-live-calendar-nav input{font-size:12px}.booking-live-staff{gap:8px}.booking-live-times{grid-template-columns:repeat(4,minmax(0,1fr))}.booking-live-account-email>svg:nth-of-type(2){margin-left:0}.booking-live-ack{font-size:10px}.booking-live-privacy{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.booking-live-spinner{animation:none}}
+
+/* Account contact is reused for each booking; changes belong in profile settings. */
+.booking-live-account-phone{display:flex;align-items:center;gap:10px;margin:14px 0;padding:13px;background:#f2ece3;border:1px solid #e6dbcd;border-radius:10px;color:#8b735f}
+.booking-live-account-phone>svg{flex-shrink:0}
+.booking-live-account-phone>div{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.booking-live-account-phone>div>span{font-size:9px;color:#8b796a}
+.booking-live-account-phone strong{font-size:12px;font-weight:500;line-height:1.5;overflow-wrap:anywhere;color:#5c493a}
+.booking-live-account-phone>button{font-size:10px;font-weight:500;color:var(--accent);padding:7px 0 7px 6px;line-height:1.6;max-width:110px;flex-shrink:0;text-align:right}
+.booking-live-account-phone>button:hover{color:var(--accent-dark)}
+.booking-live-account-phone>button:disabled{opacity:.5}
+.booking-live-contact-needed{font-size:10px;line-height:1.7;color:#a35436;margin:-4px 2px 12px}
+.booking-contact-fields--saved{grid-template-columns:1fr}
+@media(max-width:600px){.booking-live-account-phone{gap:8px;padding:11px}.booking-live-account-phone>button{max-width:95px}.booking-live-account-phone strong{font-size:12px}}

@@ -1,12 +1,13 @@
+import { t } from '../i18n.js';
 import { mapBooking, platformError, supabase } from './platform';
 
 export function bookingAlertError(error) {
   const message = `${error?.code || ''} ${error?.message || ''}`;
   let userMessage;
-  if (/PGRST202|42883|schema cache|Could not find the function/i.test(message)) userMessage = 'Οι ειδοποιήσεις κρατήσεων χρειάζονται την ενημέρωση της βάσης από τον διαχειριστή';
-  else if (/BOOKING_ALERT_NOT_FOUND/.test(message)) userMessage = 'Αυτή η ενημέρωση δεν είναι πλέον διαθέσιμη. Ανανεώστε το ιστορικό';
-  else if (/REASON|CANCELLATION_NOTE|CANCELLATION_REASON/.test(message)) userMessage = 'Γράψτε τον λόγο ακύρωσης, από 2 έως 2000 χαρακτήρες';
-  else if (/ALREADY_CANCELLED|ALERT_CANCELLED|BOOKING_CANCELLED|BOOKING_NOT_CONFIRMED|BOOKING_NOT_ACTIVE|BOOKING_STATUS/.test(message)) userMessage = 'Η κράτηση έχει ήδη ενημερωθεί. Ανανεώστε το ιστορικό για την τρέχουσα κατάσταση';
+  if (/PGRST202|42883|schema cache|Could not find the function/i.test(message)) userMessage = t('Οι ειδοποιήσεις κρατήσεων χρειάζονται την ενημέρωση της βάσης από τον διαχειριστή');
+  else if (/BOOKING_ALERT_NOT_FOUND/.test(message)) userMessage = t('Αυτή η ενημέρωση δεν είναι πλέον διαθέσιμη. Ανανεώστε το ιστορικό');
+  else if (/REASON|CANCELLATION_NOTE|CANCELLATION_REASON/.test(message)) userMessage = t('Γράψτε τον λόγο ακύρωσης, από 2 έως 2000 χαρακτήρες');
+  else if (/ALREADY_CANCELLED|ALERT_CANCELLED|BOOKING_CANCELLED|BOOKING_NOT_CONFIRMED|BOOKING_NOT_ACTIVE|BOOKING_STATUS/.test(message)) userMessage = t('Η κράτηση έχει ήδη ενημερωθεί. Ανανεώστε το ιστορικό για την τρέχουσα κατάσταση');
   else userMessage = error?.userMessage || platformError(error).userMessage;
   return Object.assign(new Error(error?.message || userMessage), { code: error?.code, userMessage });
 }
@@ -20,7 +21,7 @@ async function rpc(name, params) {
 
 export function normalizeBusinessAlert(row) {
   if (!row?.id) {
-    const userMessage = 'Δεν λάβαμε επιβεβαίωση της ενημέρωσης. Ανανεώστε το ιστορικό πριν δοκιμάσετε ξανά';
+    const userMessage = t('Δεν λάβαμε επιβεβαίωση της ενημέρωσης. Ανανεώστε το ιστορικό πριν δοκιμάσετε ξανά');
     throw Object.assign(new Error(userMessage), { userMessage });
   }
   const booking = row?.booking || {};

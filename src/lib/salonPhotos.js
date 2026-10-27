@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { platformError, supabase, updateSalon } from './platform';
 
 export const SALON_PHOTO_BUCKET = 'salon-photos';
@@ -5,7 +6,7 @@ export const SALON_PHOTO_LIMIT = 5 * 1024 * 1024;
 const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 function photoError(message) {
-  return Object.assign(new Error(message), { userMessage: message });
+  return Object.assign(new Error(message), { userMessage: t(message) });
 }
 
 function signatureMatches(type, bytes) {
@@ -43,7 +44,7 @@ function storageError(error) {
   if (/mime|content.type|unsupported/i.test(message)) return photoError('Επιλέξτε φωτογραφία JPG, PNG ή WebP');
   const normalized = platformError(error);
   if (!normalized.userMessage || /^Η ενέργεια δεν ολοκληρώθηκε\.? Προσπαθήστε ξανά$/.test(normalized.userMessage)) {
-    normalized.userMessage = 'Η φωτογραφία δεν μεταφορτώθηκε. Δοκιμάστε ξανά';
+    normalized.userMessage = t('Η φωτογραφία δεν μεταφορτώθηκε. Δοκιμάστε ξανά');
   }
   return normalized;
 }

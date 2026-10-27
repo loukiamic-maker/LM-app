@@ -1,8 +1,9 @@
+import { t, getLocale } from './i18n';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, MapPin } from 'lucide-react';
 import './city-picker.css';
 
-const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('el-GR');
+const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase(getLocale());
 
 export default function CityPicker({ value, onChange, groups }) {
   const id = useId().replace(/:/g, '');
@@ -105,7 +106,7 @@ export default function CityPicker({ value, onChange, groups }) {
       const text = (now - typed.current.time < 650 ? typed.current.text : '') + normalize(event.key);
       typed.current = { text, time: now };
       const search = [...options.keys()].map(index => (activeIndex + index + 1) % options.length);
-      const index = search.find(index => normalize(options[index].label).startsWith(text));
+      const index = search.find(index => normalize(t(options[index].label)).startsWith(text));
       if (index !== undefined) {
         setActiveIndex(index);
         setOpen(true);
@@ -119,19 +120,19 @@ export default function CityPicker({ value, onChange, groups }) {
     onPointerMove={() => setActiveIndex(index)}
     onPointerDown={event => { if (event.pointerType === 'mouse') event.preventDefault(); }}
     onClick={() => choose(index)}
-  ><span>{option.label}</span>{value === option.value && <Check size={14} aria-hidden="true" />}</div>;
+  ><span>{t(option.label)}</span>{value === option.value && <Check size={14} aria-hidden="true" />}</div>;
 
   let index = 1;
   return <div ref={wrapper} className={`search-field city-field city-picker${open ? ' city-picker-open' : ''}`}>
     <button ref={trigger} type="button" className="city-picker-trigger" role="combobox"
-      aria-label="Πόλη ή περιοχή" aria-haspopup="listbox" aria-expanded={open} aria-controls={listId}
+      aria-label={t("Πόλη ή περιοχή")} aria-haspopup="listbox" aria-expanded={open} aria-controls={listId}
       aria-activedescendant={open ? optionId(activeIndex) : undefined}
       onClick={() => open ? close() : openPicker()} onKeyDown={keyDown}>
       <MapPin size={17} strokeWidth={1.6} aria-hidden="true" />
-      <span>{value === 'all' ? 'Πόλη' : value}</span>
+      <span>{value === 'all' ? t("Πόλη") : t(value)}</span>
       <ChevronDown size={12} aria-hidden="true" />
     </button>
-    {open && <div id={listId} ref={list} role="listbox" aria-label="Πόλεις"
+    {open && <div id={listId} ref={list} role="listbox" aria-label={t("Πόλεις")}
       className={`city-picker-list${placement.above ? ' city-picker-list-above' : ''}`}
       style={{ maxHeight: placement.maxHeight }}>
       {renderOption(options[0], 0)}
@@ -140,7 +141,7 @@ export default function CityPicker({ value, onChange, groups }) {
         const start = index;
         index += group.cities.length;
         return <div key={group.country} role="group" aria-labelledby={labelId} className="city-picker-group">
-          <div id={labelId} className="city-picker-country">{group.country}</div>
+          <div id={labelId} className="city-picker-country">{t(group.country)}</div>
           {group.cities.map((city, cityIndex) => renderOption(options[start + cityIndex], start + cityIndex))}
         </div>;
       })}

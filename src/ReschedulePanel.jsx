@@ -1,8 +1,11 @@
+import { t, getLocale } from './i18n';
+import { useLanguage } from './Language';
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { getSlots, rescheduleBooking } from './lib/platform';
 
 export default function ReschedulePanel({ booking, onClose, onSaved }) {
+  useLanguage();
   const [date, setDate] = useState(booking.date);
   const [slots, setSlots] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -41,5 +44,5 @@ export default function ReschedulePanel({ booking, onClose, onSaved }) {
     catch (failure) { setError(failure.userMessage || failure.message); setSelected(null); }
     finally { setBusy(false); }
   }
-  return <div className="account-overlay"><section id="reschedule-panel" className="account-panel" role="dialog" aria-modal="true" aria-label="Αλλαγή ώρας ραντεβού"><button className="account-close" disabled={busy} onClick={onClose} aria-label="Κλείσιμο αλλαγής ώρας"><X size={20}/></button><h2>Μια νέα στιγμή για εσάς</h2><p className="lb-note">{booking.salonName} · {booking.service.name}. Η αρχική κράτηση παραμένει ενεργή μέχρι να επιβεβαιωθεί η αλλαγή</p><label className="lb-field"><span>Νέα ημερομηνία</span><input type="date" min={min} max={end.toISOString().slice(0,10)} value={date} onChange={e => setDate(e.target.value)} /></label>{loading ? <p role="status">Έλεγχος διαθεσιμότητας…</p> : <div className="lb-slot-grid" style={{ margin: '15px 0' }}>{slots.map(slot => <button key={`${slot.staffId}-${slot.startsAt}`} className={selected === slot ? 'lb-slot-selected' : ''} onClick={() => setSelected(slot)}><strong>{slot.time}</strong><span>{slot.staffName}</span></button>)}</div>}{!loading && !slots.length && <p>Δεν υπάρχουν διαθέσιμες ώρες για αυτή την ημέρα</p>}{error && <p className="account-error" role="alert">{error}</p>}<button className="account-primary" disabled={!selected || busy || loading} onClick={save}>{busy ? 'Αποθήκευση…' : 'Επιβεβαίωση νέας ώρας'}</button><p className="lb-note">Αλλαγές έως {booking.cancellationHours} ώρες πριν από το ραντεβού. Μετά, επικοινωνήστε με το κατάστημα</p></section></div>;
+  return <div className="account-overlay"><section id="reschedule-panel" className="account-panel" role="dialog" aria-modal="true" aria-label={t("Αλλαγή ώρας ραντεβού")}><button className="account-close" disabled={busy} onClick={onClose} aria-label={t("Κλείσιμο αλλαγής ώρας")}><X size={20}/></button><h2>{t("Μια νέα στιγμή για εσάς")}</h2><p className="lb-note">{booking.salonName} · {booking.service.name}{t(". Η αρχική κράτηση παραμένει ενεργή μέχρι να επιβεβαιωθεί η αλλαγή")}</p><label className="lb-field"><span>{t("Νέα ημερομηνία")}</span><input type="date" lang={getLocale()} min={min} max={end.toISOString().slice(0,10)} value={date} onChange={e => setDate(e.target.value)} /></label>{loading ? <p role="status">{t("Έλεγχος διαθεσιμότητας…")}</p> : <div className="lb-slot-grid" style={{ margin: '15px 0' }}>{slots.map(slot => <button key={`${slot.staffId}-${slot.startsAt}`} className={selected === slot ? 'lb-slot-selected' : ''} onClick={() => setSelected(slot)}><strong>{slot.time}</strong><span>{slot.staffName}</span></button>)}</div>}{!loading && !slots.length && <p>{t("Δεν υπάρχουν διαθέσιμες ώρες για αυτή την ημέρα")}</p>}{error && <p className="account-error" role="alert">{t(error)}</p>}<button className="account-primary" disabled={!selected || busy || loading} onClick={save}>{busy ? t("Αποθήκευση…") : t("Επιβεβαίωση νέας ώρας")}</button><p className="lb-note">{t("Αλλαγές έως ")}{booking.cancellationHours}{t(" ώρες πριν από το ραντεβού. Μετά, επικοινωνήστε με το κατάστημα")}</p></section></div>;
 }

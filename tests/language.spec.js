@@ -25,6 +25,7 @@ async function publicDemo(page) {
 test('English is the default, city groups are translated and Greek stays selected after reload and navigation', async ({ page }) => {
   await publicDemo(page);
   await expect(page.locator('html')).toHaveAttribute('lang','en');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content',/^Discover beauty and wellness/);
   await expect(languagePicker(page)).toHaveValue('en');
   await expect(page.getByRole('heading', { name:'Which service do you need today?',exact:true })).toBeVisible();
   await page.getByRole('button', { name:'Hair',exact:true }).click();
@@ -36,6 +37,7 @@ test('English is the default, city groups are translated and Greek stays selecte
   await expect(page.getByRole('combobox', { name:'City or area',exact:true })).toContainText('Athens');
   await languagePicker(page).selectOption('el');
   await expect(page.locator('html')).toHaveAttribute('lang','el');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content',/^Ανακαλύψτε χώρους ομορφιάς/);
   await expect(page.getByRole('heading', { name:'Τι υπηρεσία χρειάζεστε σήμερα;',exact:true })).toBeVisible();
   await expect(page.getByRole('button', { name:'Μαλλιά',exact:true })).toHaveAttribute('aria-pressed','true');
   await expect(page.getByRole('combobox', { name:'Πόλη ή περιοχή',exact:true })).toContainText('Αθήνα');

@@ -16,6 +16,10 @@ function updateDocument() {
   if (typeof document === 'undefined') return;
   document.documentElement.lang = language;
   document.title = language === 'en' ? 'Eneres | Beauty & wellness appointments in Greece & Cyprus' : 'Eneres | Ραντεβού ομορφιάς σε Ελλάδα & Κύπρο';
+  const description = document.querySelector('meta[name="description"]');
+  if (description) description.content = language === 'en'
+    ? 'Discover beauty and wellness salons in Greece and Cyprus. Find your service and book time for yourself with Eneres'
+    : 'Ανακαλύψτε χώρους ομορφιάς και ευεξίας στην Ελλάδα και την Κύπρο. Βρείτε την υπηρεσία σας και κλείστε χρόνο για εσάς με το Eneres';
 }
 export function setLanguage(next) {
   if (!['en', 'el'].includes(next)) return;

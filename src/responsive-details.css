@@ -1,0 +1,14 @@
+/* Preserve the original page typography in both languages while keeping
+   account details and appointment forms within narrow screens. */
+@media (max-width: 700px) {
+  #root .phone-field-controls { grid-template-columns: minmax(0, 1fr); }
+  #root .lb-calendar-date-controls input { max-width: 170px; }
+  #root .booking-live-account-phone { align-items: flex-start; }
+}
+
+#root :is(.salon-bottom, .appointment-price) { flex-wrap: wrap; }
+#root .salon-bottom > button { min-width: 0; max-width: 100%; }
+
+@media (max-width: 370px) {
+  #root .lb-form-grid { grid-template-columns: minmax(0, 1fr); }
+}
